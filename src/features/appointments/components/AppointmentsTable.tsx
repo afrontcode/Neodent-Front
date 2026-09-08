@@ -1,0 +1,91 @@
+import { Fragment } from 'react'
+import {
+  ActionsCell,
+  Badge,
+  KebabMenu,
+  SeparatorRow,
+  Table,
+  TableState,
+  type Column,
+} from '@/components/ui'
+import type { Id } from '@/lib/id'
+import { isoToDMY, longDate, money } from '@/lib/format'
+import { canActOn, type Appointment } from '../types'
+import { paymentTone, statusTone } from '../utils'
+
+const COLUMNS: Column[] = [
+  { label: 'Fecha' },
+  { label: 'Hora' },
+  { label: 'Paciente' },
+  { label: 'Odontólogo' },
+  { label: 'Lugar' },
+  { label: 'Estado' },
+  { label: 'Pago' },
+  { label: 'Acciones', align: 'right' },
+]
+
+interface AppointmentsTableProps {
+  appointments: Appointment[]
+  pacName: (id: Id) => string
+  docName: (id: Id) => string
+  onDetail: (a: Appointment) => void
+  onPatient: (a: Appointment) => void
+  onReschedule: (a: Appointment) => void
+  onCancel: (a: Appointment) => void
+}
+
+/** Tabla de citas agrupada por día: una fila separadora por cada fecha. */
+export function AppointmentsTable({
+  appointments,
+  pacName,
+  docName,
+  onDetail,
+  onPatient,
+  onReschedule,
+  onCancel,
+}: AppointmentsTableProps) {
+  return (
+    <Table columns={COLUMNS}>
+      <TableState
+        colSpan={COLUMNS.length}
+        empty={appointments.length === 0}
+        emptyLabel="No hay citas que coincidan con los filtros."
+      />
+      {appointments.map((a, i) => {
+        const newDay = i === 0 || a.fecha !== appointments[i - 1].fecha
+        const actionable = canActOn(a)
+        return (
+          <Fragment key={a.id}>
+            {newDay && <SeparatorRow colSpan={COLUMNS.length}>{longDate(a.fecha)}</SeparatorRow>}
+            <tr className={a.estado === 'Cancelada' ? 'opacity-55' : undefined}>
+              <td>{isoToDMY(a.fecha)}</td>
+              <td>{a.hora}</td>
+              <td className="font-bold">{pacName(a.pacId)}</td>
+              <td>{docName(a.docId)}</td>
+              <td>{a.lugar}</td>
+              <td>
+                <Badge tone={statusTone[a.estado]}>{a.estado}</Badge>
+              </td>
+              <td>
+                <Badge tone={paymentTone[a.pago]}>{a.pago}</Badge>
+                {a.precio != null && (
+                  <div className="mt-1 text-[0.8rem] text-muted">{money(a.precio)}</div>
+                )}
+              </td>
+              <ActionsCell>
+                <KebabMenu
+                  actions={[
+                    { label: 'Ver detalle de la cita', icon: 'eye', onClick: () => onDetail(a) },
+                    { label: 'Ver ficha del paciente', icon: 'file', onClick: () => onPatient(a) },
+                    { label: 'Reprogramar', icon: 'calendarEdit', onClick: () => onReschedule(a), show: actionable },
+                    { label: 'Cancelar cita', icon: 'xCircle', onClick: () => onCancel(a), danger: true, dividerBefore: true, show: actionable },
+                  ]}
+                />
+              </ActionsCell>
+            </tr>
+          </Fragment>
+        )
+      })}
+    </Table>
+  )
+}
