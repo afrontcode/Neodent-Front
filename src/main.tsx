@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { DataProvider } from '@/store/DataProvider'
 import App from './App.tsx'
+import 'blobatar/motion.css'
+import 'blobatar/gaze.css'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

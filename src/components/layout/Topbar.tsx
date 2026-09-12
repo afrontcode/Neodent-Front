@@ -1,6 +1,7 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/features/auth/hooks'
-import { fullName } from '@/lib/people'
-import { Icon } from '@/components/ui'
+import { avatarSeed, fullName } from '@/lib/people'
+import { Avatar, Icon } from '@/components/ui'
 
 export function Topbar() {
   const { user: me } = useAuth()
@@ -17,17 +18,24 @@ export function Topbar() {
       </button>
 
       {me && (
-        <div className="flex items-center gap-2.5">
-          <img
-            src="https://i.pravatar.cc/80?img=12"
-            alt=""
-            className="size-10 rounded-full bg-line object-cover"
+        <Link
+          to="/perfil"
+          className="flex items-center gap-2.5 rounded-full p-1 transition hover:bg-hover"
+          title="Ver mi perfil"
+        >
+          <Avatar
+            nombre={me.nombre}
+            apellido={me.apellido}
+            seed={avatarSeed(me.id)}
+            size={45}
+            animate="always"
           />
-          <div className="max-md:hidden">
-            <div className="text-[0.9rem] leading-tight font-bold">{fullName(me)}</div>
+
+          <div className="pr-2 max-md:hidden">
+            <div className="text-[0.9rem] leading-tight font-bold text-ink">{fullName(me)}</div>
             <div className="text-[0.78rem] text-muted">{me.rol}</div>
           </div>
-        </div>
+        </Link>
       )}
     </header>
   )
