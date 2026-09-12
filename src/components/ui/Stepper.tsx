@@ -13,20 +13,27 @@ interface StepperProps {
   current: number
 }
 
-/** Progreso de un formulario por pasos: una barra por paso y su rótulo debajo. */
+/**
+ * Progreso de un formulario por pasos: una barra por paso y su rótulo debajo.
+ * El paso en curso se marca en azul y los ya completados en verde.
+ */
 export function Stepper({ steps, current }: StepperProps) {
   return (
     <ol className="flex gap-5 max-sm:flex-col max-sm:gap-3">
       {steps.map((step, i) => {
-        const done = i <= current
+        const active = i === current
+        const done = i < current
         return (
           <li key={step.label} className="flex-1">
-            <div className={cn('h-1 rounded-full', done ? 'bg-brand' : 'bg-line')} aria-hidden="true" />
-            <div className="pt-3" aria-current={i === current ? 'step' : undefined}>
-              <div className={cn('text-[0.82rem] font-bold', done ? 'text-brand' : 'text-muted')}>
+            <div
+              className={cn('h-1 rounded-full', done ? 'bg-success' : active ? 'bg-brand' : 'bg-line')}
+              aria-hidden="true"
+            />
+            <div className="pt-3" aria-current={active ? 'step' : undefined}>
+              <div className={cn('text-[0.82rem] font-bold', active ? 'text-brand' : 'text-ink-soft')}>
                 {step.label}
               </div>
-              <div className={cn('text-[0.9rem]', done ? 'text-brand' : 'text-muted')}>{step.title}</div>
+              <div className={cn('text-[0.9rem]', active ? 'text-brand' : 'text-muted')}>{step.title}</div>
             </div>
           </li>
         )

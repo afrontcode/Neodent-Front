@@ -10,6 +10,7 @@ import { AppointmentsPage } from '@/features/appointments/AppointmentsPage'
 import { AppointmentDetailPage } from '@/features/appointments/AppointmentDetailPage'
 import { MyAppointmentsPage } from '@/features/appointments/MyAppointmentsPage'
 import { NewAppointmentPage } from '@/features/appointments/NewAppointmentPage'
+import { NewAppointmentSchedulePage } from '@/features/appointments/NewAppointmentSchedulePage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { STAFF_ROLES } from '@/features/users/types'
 
@@ -50,7 +51,8 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/mis-citas" element={<MyAppointmentsPage />} />
           <Route path="/mis-citas/nueva" element={<NewAppointmentPage />} />
-          <Route path="/mis-citas/nueva/fecha-y-hora" element={<Placeholder title="Fecha y hora" description="Paso 2 de la reserva: elige especialista, día y hora." />} />
+          <Route path="/mis-citas/nueva/fecha-y-hora" element={<NewAppointmentSchedulePage />} />
+          <Route path="/mis-citas/nueva/confirmar" element={<Placeholder title="Confirmar cita" description="Paso 3 de la reserva: revisa y confirma los datos." />} />
           <Route path="/mis-citas/:id/reprogramar" element={<Placeholder title="Reprogramar cita" />} />
         </Route>
       </Route>

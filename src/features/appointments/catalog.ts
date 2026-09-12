@@ -1,4 +1,13 @@
+import type { Step } from '@/components/ui/Stepper'
 import type { IconName } from '@/components/ui/Icon'
+import type { Id } from '@/lib/id'
+
+/** Pasos de la reserva, compartidos por todas las pantallas del proceso. */
+export const BOOKING_STEPS: readonly Step[] = [
+  { label: 'PASO 1', title: 'Datos generales' },
+  { label: 'PASO 2', title: 'Fecha y hora' },
+  { label: 'PASO 3', title: 'Confirmar' },
+]
 
 export interface Service {
   id: string
@@ -32,4 +41,13 @@ export const BRANCHES: readonly Branch[] = [
 export interface AppointmentDraft {
   servicio: string
   sede: string
+}
+
+/** El segundo paso añade al borrador el especialista y el cupo elegido. */
+export interface ScheduleDraft extends AppointmentDraft {
+  docId: Id
+  /** Fecha en ISO (yyyy-mm-dd). */
+  fecha: string
+  /** Hora en formato HH:mm. */
+  hora: string
 }

@@ -17,6 +17,12 @@ export function longDateNoYear(iso: string) {
   return `${DOW[dt.getDay()]} ${d} de ${MONTHS[m - 1]}`
 }
 
+/** 2026-08-24 -> Lunes */
+export function dayName(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  return DOW[new Date(y, m - 1, d).getDay()]
+}
+
 /** 09:00 -> 9:00 AM */
 export function time12h(hhmm: string) {
   const [h, m] = hhmm.split(':').map(Number)
