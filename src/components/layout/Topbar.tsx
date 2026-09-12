@@ -1,10 +1,9 @@
-import { CURRENT_USER_ID } from '@/config/session'
-import { MOCK_USERS } from '@/features/users/mock'
+import { useAuth } from '@/features/auth/hooks'
 import { fullName } from '@/lib/people'
 import { Icon } from '@/components/ui'
 
 export function Topbar() {
-  const me = MOCK_USERS.find((u) => u.id === CURRENT_USER_ID)
+  const { user: me } = useAuth()
 
   return (
     <header className="flex h-topbar flex-none items-center justify-end gap-4 border-b border-line bg-surface px-6 print:hidden">

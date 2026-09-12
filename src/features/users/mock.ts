@@ -12,4 +12,7 @@ export const MOCK_USERS: User[] = [
   { id: 8, nombre: 'Carlos', apellido: 'Mendoza', correo: 'carlos.mendoza@neodents.com', rol: 'Odontólogo', esp: 'Endodoncia', activo: true, tieneHorario: true },
   { id: 9, nombre: 'Andrea', apellido: 'Salas', correo: 'andrea.salas@neodents.com', rol: 'Odontólogo', esp: 'Periodoncia', activo: true, tieneHorario: false },
   { id: 10, nombre: 'Diego', apellido: 'Vargas', correo: 'diego.vargas@neodents.com', rol: 'Administrador', esp: 'Administración', activo: false, tieneHorario: true },
+  // Cuenta de paciente: `pacId` apunta a su ficha en MOCK_PATIENTS y es lo que
+  // permite mostrarle sus propias citas.
+  { id: 11, nombre: 'Rosa', apellido: 'Aguilar', correo: 'rosa.aguilar@gmail.com', rol: 'Paciente', esp: '', activo: true, tieneHorario: false, pacId: 1 },
 ]

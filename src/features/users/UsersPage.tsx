@@ -13,7 +13,8 @@ import {
 import { fullName } from '@/lib/people'
 import { useData } from '@/store/hooks'
 import { UsersTable } from './components/UsersTable'
-import { ROLES, type Role, type User } from './types'
+import { isPatient } from './utils'
+import { STAFF_ROLES, type Role, type User } from './types'
 
 /** Usuarios por página, según el diseño del listado. */
 const PAGE_SIZE = 7
@@ -29,6 +30,8 @@ export function UsersPage() {
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim()
     return users.filter((u) => {
+      // Esta pantalla administra al equipo; las cuentas de paciente no salen aquí.
+      if (isPatient(u)) return false
       if (rol && u.rol !== rol) return false
       if (!q) return true
       return fullName(u).toLowerCase().includes(q) || u.correo.toLowerCase().includes(q)
@@ -82,7 +85,7 @@ export function UsersPage() {
           <Select
             aria-label="Filtrar por rol"
             placeholder="Todos los roles"
-            options={ROLES}
+            options={STAFF_ROLES}
             value={rol}
             onChange={(e) => applyFilter(() => setRol(e.target.value as Role | ''))}
             className="min-w-52"

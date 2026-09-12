@@ -10,5 +10,20 @@ export function longDate(iso: string) {
   return `${DOW[dt.getDay()]} ${d} de ${MONTHS[m - 1]} de ${y}`
 }
 
+/** 2026-08-24 -> Lunes 24 de Agosto (sin año, para las tarjetas del paciente) */
+export function longDateNoYear(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  return `${DOW[dt.getDay()]} ${d} de ${MONTHS[m - 1]}`
+}
+
+/** 09:00 -> 9:00 AM */
+export function time12h(hhmm: string) {
+  const [h, m] = hhmm.split(':').map(Number)
+  const suffix = h < 12 ? 'AM' : 'PM'
+  const hour = h % 12 || 12
+  return `${hour}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
 export const money = (n: number | null | undefined) =>
   n != null ? `S/ ${Number(n).toFixed(2)}` : '—'
