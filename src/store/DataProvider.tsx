@@ -5,9 +5,13 @@ import { MOCK_APPOINTMENTS } from '@/features/appointments/mock'
 import { MOCK_PATIENTS } from '@/features/patients/mock'
 import { MOCK_USERS } from '@/features/users/mock'
 import { DataContext, type DataStore } from './context'
-import type { Appointment, PaymentInput } from '@/features/appointments/types'
+import type { Appointment, NewAppointment, PaymentInput } from '@/features/appointments/types'
 import type { Patient } from '@/features/patients/types'
 import type { User } from '@/features/users/types'
+
+/** Siguiente id libre de una colección mock. Lo asignará el backend. */
+const nextId = (items: readonly { id: Id }[]) =>
+  items.reduce((max, item) => Math.max(max, item.id), 0) + 1
 
 /**
  * Estado compartido de la aplicación. Hoy resuelve contra los mocks en memoria:
@@ -35,6 +39,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const docEsp = useCallback((id: Id) => users.find((x) => x.id === id)?.esp ?? '', [users])
 
+  /**
+   * Alta de una cita reservada desde el área del paciente. Nace programada y
+   * con el pago pendiente, que es como llega al centro. Con la API conectada,
+   * el id y el estado los devolverá el backend.
+   */
+  const createAppointment = useCallback((input: NewAppointment) => {
+    const cita: Appointment = {
+      ...input,
+      id: nextId(appointments),
+      estado: 'Programada',
+      pago: 'Pendiente',
+      tipoPago: null,
+      codigoTransaccion: '',
+    }
+    setAppointments((list) => [...list, cita])
+    return cita
+  }, [appointments])
+
   const cancelAppointment = useCallback((id: Id) => {
     setAppointments((list) =>
       list.map((a) => (a.id === id ? { ...a, estado: 'Cancelada', pago: 'No realizado' } : a)),
@@ -54,9 +76,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       appointments, patients, users,
       appointmentById, patientById, userById,
       pacName, docName, docEsp,
-      cancelAppointment, savePayment, deleteUser,
+      createAppointment, cancelAppointment, savePayment, deleteUser,
     }),
-    [appointments, patients, users, appointmentById, patientById, userById, pacName, docName, docEsp, cancelAppointment, savePayment, deleteUser],
+    [appointments, patients, users, appointmentById, patientById, userById, pacName, docName, docEsp, createAppointment, cancelAppointment, savePayment, deleteUser],
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

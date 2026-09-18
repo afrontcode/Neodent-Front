@@ -26,6 +26,12 @@ export interface Appointment {
   codigoTransaccion: string
 }
 
+/** Datos con los que el paciente reserva una cita nueva. */
+export type NewAppointment = Pick<
+  Appointment,
+  'pacId' | 'docId' | 'fecha' | 'hora' | 'lugar' | 'precio'
+>
+
 /** Campos que edita la tarjeta de pago del detalle. */
 export type PaymentInput = Pick<Appointment, 'pago' | 'precio' | 'tipoPago' | 'codigoTransaccion'>
 
