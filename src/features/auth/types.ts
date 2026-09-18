@@ -24,3 +24,17 @@ export interface RegisterInput {
   confirmPassword: string
   aceptaTerminos: boolean
 }
+
+/** Desde dónde se llegó a la verificación: cambia el texto y a dónde se vuelve. */
+export type VerificationReason = 'registro' | 'login'
+
+/** Verificación de correo en curso, a la espera de que se ingrese el código. */
+export interface PendingVerification {
+  correo: string
+  motivo: VerificationReason
+  /** Sólo en 'login': mantener la sesión al terminar de verificar. */
+  recordarme: boolean
+}
+
+/** Resultado de `login`: o quedó la sesión abierta, o falta verificar el correo. */
+export type LoginOutcome = 'ok' | 'verificar'

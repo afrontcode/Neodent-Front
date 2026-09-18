@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 import type { Id } from '@/lib/id'
-import type { Appointment, PaymentInput } from '@/features/appointments/types'
+import type { Appointment, NewAppointment, PaymentInput } from '@/features/appointments/types'
 import type { Patient } from '@/features/patients/types'
 import type { User } from '@/features/users/types'
 
@@ -15,6 +15,8 @@ export interface DataStore {
   pacName: (id: Id) => string
   docName: (id: Id) => string
   docEsp: (id: Id) => string
+  /** Registra la cita reservada por el paciente y devuelve la que quedó creada. */
+  createAppointment: (input: NewAppointment) => Appointment
   cancelAppointment: (id: Id) => void
   deleteUser: (id: Id) => void
   savePayment: (id: Id, input: PaymentInput) => void

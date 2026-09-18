@@ -6,9 +6,11 @@ import { HomeRedirect } from '@/features/auth/HomeRedirect'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
 import { AppointmentsPage } from '@/features/appointments/AppointmentsPage'
 import { AppointmentDetailPage } from '@/features/appointments/AppointmentDetailPage'
 import { MyAppointmentsPage } from '@/features/appointments/MyAppointmentsPage'
+import { NewAppointmentConfirmPage } from '@/features/appointments/NewAppointmentConfirmPage'
 import { NewAppointmentPage } from '@/features/appointments/NewAppointmentPage'
 import { NewAppointmentSchedulePage } from '@/features/appointments/NewAppointmentSchedulePage'
 import { UsersPage } from '@/features/users/UsersPage'
@@ -25,15 +27,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/recuperar" element={<Placeholder title="Recuperar contraseña" />} />
-        <Route
-          path="/verificar-correo"
-          element={
-            <Placeholder
-              title="Verifica tu correo"
-              description="Te enviamos un código de verificación a tu correo electrónico para confirmar tu identidad."
-            />
-          }
-        />
+        <Route path="/verificar-correo" element={<VerifyEmailPage />} />
         <Route path="/terminos" element={<Placeholder title="Términos y condiciones" />} />
       </Route>
 
@@ -64,15 +58,7 @@ export default function App() {
           <Route path="/mis-citas" element={<MyAppointmentsPage />} />
           <Route path="/mis-citas/nueva" element={<NewAppointmentPage />} />
           <Route path="/mis-citas/nueva/fecha-y-hora" element={<NewAppointmentSchedulePage />} />
-          <Route
-            path="/mis-citas/nueva/confirmar"
-            element={
-              <Placeholder
-                title="Confirmar cita"
-                description="Paso 3 de la reserva: revisa y confirma los datos."
-              />
-            }
-          />
+          <Route path="/mis-citas/nueva/confirmar" element={<NewAppointmentConfirmPage />} />
           <Route path="/mis-citas/:id/reprogramar" element={<Placeholder title="Reprogramar cita" />} />
         </Route>
       </Route>

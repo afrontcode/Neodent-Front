@@ -1,7 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, DateField, PageHead, SearchInput, TableFoot, Toolbar } from '@/components/ui'
-import { isoToDMY } from '@/lib/format'
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  DateField,
+  PageHead,
+  SearchInput,
+  TableFoot,
+  Toolbar,
+} from '@/components/ui'
 import { useData } from '@/store/hooks'
 import { AppointmentsTable } from './components/AppointmentsTable'
 import { compareAppointments } from './utils'
@@ -13,6 +21,8 @@ export function AppointmentsPage() {
 
   const [query, setQuery] = useState('')
   const [day, setDay] = useState('')
+  /** Cita cuya cancelación está pendiente de confirmar. */
+  const [toCancel, setToCancel] = useState<Appointment | null>(null)
 
   const rows = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -25,11 +35,9 @@ export function AppointmentsPage() {
       .sort(compareAppointments)
   }, [appointments, query, day, pacName])
 
-  const handleCancel = (a: Appointment) => {
-    const ok = window.confirm(
-      `¿Cancelar la cita de ${pacName(a.pacId)} del ${isoToDMY(a.fecha)} a las ${a.hora}?`,
-    )
-    if (ok) cancelAppointment(a.id)
+  const confirmCancel = () => {
+    if (toCancel) cancelAppointment(toCancel.id)
+    setToCancel(null)
   }
 
   return (
@@ -61,11 +69,21 @@ export function AppointmentsPage() {
           onDetail={(a) => navigate(`/citas/${a.id}`)}
           onPatient={(a) => navigate(`/pacientes/${a.pacId}`)}
           onReschedule={(a) => navigate(`/citas/${a.id}/reprogramar`)}
-          onCancel={handleCancel}
+          onCancel={setToCancel}
         />
 
         <TableFoot summary={`${rows.length} cita${rows.length === 1 ? '' : 's'}`} />
       </Card>
+
+      <ConfirmDialog
+        open={toCancel !== null}
+        title="¿Estás seguro de cancelar la cita?"
+        description="Esta acción es irreversible."
+        cancelLabel="Regresar"
+        confirmLabel="Aceptar"
+        onCancel={() => setToCancel(null)}
+        onConfirm={confirmCancel}
+      />
     </>
   )
 }

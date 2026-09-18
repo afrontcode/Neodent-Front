@@ -14,8 +14,9 @@ export function RegisterPage() {
   if (user) return <Navigate to={HOME} replace />
 
   const handleSubmit = async (input: RegisterInput) => {
+    // El registro deja el correo pendiente de confirmar: se sigue con el código.
     await register(input)
-    navigate('/verificar-correo', { replace: true, state: { correo: input.correo } })
+    navigate('/verificar-correo', { replace: true })
   }
 
   return (

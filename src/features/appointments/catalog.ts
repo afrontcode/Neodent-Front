@@ -15,15 +15,23 @@ export interface Service {
   /** Frase corta bajo el nombre, en la tarjeta del servicio. */
   detalle: string
   icon: IconName
+  /** Tarifa en soles que se muestra al confirmar la cita. */
+  precio: number
 }
 
 /** Servicios que el paciente puede reservar. Sustituir por el catálogo del backend. */
 export const SERVICES: readonly Service[] = [
-  { id: 'profilaxis', nombre: 'Profilaxis', detalle: 'Limpieza dental', icon: 'braces' },
-  { id: 'extraccion', nombre: 'Extracción', detalle: 'Extracción dental', icon: 'forceps' },
-  { id: 'curacion', nombre: 'Curación', detalle: 'Curación dental', icon: 'toothCracked' },
-  { id: 'otras', nombre: 'Otras consultas', detalle: 'Evaluamos tu caso', icon: 'tooth' },
+  { id: 'profilaxis', nombre: 'Profilaxis', detalle: 'Limpieza dental', icon: 'braces', precio: 80 },
+  { id: 'extraccion', nombre: 'Extracción', detalle: 'Extracción dental', icon: 'forceps', precio: 150 },
+  { id: 'curacion', nombre: 'Curación', detalle: 'Curación dental', icon: 'toothCracked', precio: 120 },
+  { id: 'otras', nombre: 'Otras consultas', detalle: 'Evaluamos tu caso', icon: 'tooth', precio: 60 },
 ]
+
+/** Servicio del catálogo por su id. */
+export const serviceById = (id: string) => SERVICES.find((s) => s.id === id)
+
+/** Sede del catálogo por su nombre, para recuperar la dirección. */
+export const branchByName = (nombre: string) => BRANCHES.find((b) => b.nombre === nombre)
 
 export interface Branch {
   nombre: string

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button, Card, ConfirmDialog, Icon, PageHead, Tabs, type TabItem } from '@/components/ui'
 import { TODAY } from '@/lib/constants'
 import type { Id } from '@/lib/id'
@@ -24,8 +24,12 @@ const isUpcoming = (a: Appointment) => a.fecha >= TODAY && canActOn(a)
 
 export function MyAppointmentsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const { appointments, docName, docEsp, cancelAppointment } = useData()
+
+  /** Se llega con este aviso al terminar de reservar una cita. */
+  const creada: boolean = location.state?.creada ?? false
 
   const [tab, setTab] = useState<TabValue>('proximas')
   /** Cita cuya cancelación está pendiente de confirmar. */
@@ -55,6 +59,16 @@ export function MyAppointmentsPage() {
           </Button>
         }
       />
+
+      {creada && (
+        <div
+          role="status"
+          className="mb-5 flex items-center gap-2.5 rounded-control border border-success/30 bg-success-soft px-4 py-3 text-[0.9rem] text-success"
+        >
+          <Icon name="check" size={18} strokeWidth={2.4} />
+          Tu cita quedó registrada. Te esperamos el día programado.
+        </div>
+      )}
 
       <Tabs items={TABS} value={tab} onChange={setTab} label="Filtrar mis citas" />
 

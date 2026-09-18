@@ -26,6 +26,11 @@ export interface User {
   esp: string
   activo: boolean
   /**
+   * Si la persona ya confirmó su correo con el código de verificación. Las
+   * cuentas sin confirmar deben verificarlo antes de poder iniciar sesión.
+   */
+  correoVerificado: boolean
+  /**
    * Si tiene disponibilidad configurada. Vendrá del endpoint de horarios;
    * mientras tanto se lee de los datos de ejemplo.
    */
