@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@blobatar/react": "^2.7.0",
+    "@marsidev/react-turnstile": "^1.6.1",
     "blobatar": "^2.7.0",
+    "motion": "^13.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3"

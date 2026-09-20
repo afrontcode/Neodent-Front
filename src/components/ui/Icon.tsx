@@ -24,6 +24,10 @@ const ICONS = {
   eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></>,
   file: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></>,
   xCircle: <><circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6M9 9l6 6" /></>,
+  x: <path d="M18 6L6 18M6 6l12 12" />,
+  checkCircle: <><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2 4-4" /></>,
+  alertCircle: <><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></>,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M12 12v4" /></>,
   warning: <path d="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />,
   spinner: <path d="M12 3a9 9 0 019 9" />,
   check: <path d="M20 6L9 17l-5-5" />,
@@ -38,6 +42,7 @@ const ICONS = {
   toothCracked: <><path d="M12 4c-1.6 0-2.4.7-3.8.7S5.5 4 4.8 5.6c-.6 1.4-.3 3 .3 5.3.5 1.9.7 3.4.9 4.9.2 1.8.6 3.2 1.7 3.2 1.3 0 1.5-1.7 1.9-3.4.3-1.3.6-2.1 2.4-2.1s2.1.8 2.4 2.1c.4 1.7.6 3.4 1.9 3.4 1.1 0 1.5-1.4 1.7-3.2.2-1.5.4-3 .9-4.9.6-2.3.9-3.9.3-5.3C18.5 4 17.2 4.7 15.8 4.7S13.6 4 12 4z" /><path d="M12.6 7.2l-1.8 2.6h2.2l-1.6 2.4" /></>,
   braces: <><rect x="2.5" y="8" width="19" height="8" rx="2.5" /><path d="M7 8v8M12 8v8M17 8v8" /><circle cx="4.8" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="9.5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="14.5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19.2" cy="12" r="1" fill="currentColor" stroke="none" /></>,
   forceps: <><path d="M7.5 2.5l3.4 7.2M16.5 2.5l-3.4 7.2" /><path d="M12 10c-1.2 0-2 .6-2.6 1.4-.7 1-.6 2.4-.3 3.9.3 1.4.4 3.2 1.3 3.2.8 0 1-1.4 1.6-1.4s.8 1.4 1.6 1.4c.9 0 1-1.8 1.3-3.2.3-1.5.4-2.9-.3-3.9-.6-.8-1.4-1.4-2.6-1.4z" /></>,
+  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
 }
 
 export type IconName = keyof typeof ICONS

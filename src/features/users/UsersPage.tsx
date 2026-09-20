@@ -1,75 +1,99 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Button,
-  Card,
-  PageHead,
-  Pagination,
-  SearchInput,
-  Select,
-  TableFoot,
-  Toolbar,
-} from '@/components/ui'
-import { fullName } from '@/lib/people'
-import { useData } from '@/store/hooks'
+import { Button, Card, PageHead, Pagination, SearchInput, Select, TableFoot, Toolbar } from '@/components/ui'
+import { usersApi, type PaginaResponse, type UsuarioInternoResponse } from '@/api/usersApi'
+import { ApiError } from '@/api/apiClient'
+import { useAuth } from '@/features/auth/hooks'
 import { UsersTable } from './components/UsersTable'
-import { isPatient } from './utils'
-import { STAFF_ROLES, type Role, type User } from './types'
+import { mapUsuarioInterno, ROLE_TO_BACKEND } from './mappers'
+import { STAFF_ROLES, type User } from './types'
 
-/** Usuarios por página, según el diseño del listado. */
 const PAGE_SIZE = 7
 
 export function UsersPage() {
   const navigate = useNavigate()
-  const { users, appointments, deleteUser } = useData()
+  const { accessToken } = useAuth()
 
   const [query, setQuery] = useState('')
   const [rol, setRol] = useState('')
   const [page, setPage] = useState(1)
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim()
-    return users.filter((u) => {
-      // Esta pantalla administra al equipo; las cuentas de paciente no salen aquí.
-      if (isPatient(u)) return false
-      if (rol && u.rol !== rol) return false
-      if (!q) return true
-      return fullName(u).toLowerCase().includes(q) || u.correo.toLowerCase().includes(q)
-    })
-  }, [users, query, rol])
+  const [resultado, setResultado] =
+    useState<PaginaResponse<UsuarioInternoResponse> | null>(null)
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  /** Si un filtro deja menos páginas que la actual, retrocede a la última válida. */
-  const current = Math.min(page, totalPages)
-  const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  /** Al cambiar un filtro se vuelve a la primera página. */
-  const applyFilter = (fn: () => void) => {
-    fn()
-    setPage(1)
-  }
-
-  const handleDelete = (u: User) => {
-    const citas = appointments.filter((a) => a.docId === u.id).length
-    if (citas > 0) {
-      window.alert(
-        `${fullName(u)} tiene ${citas} cita${citas === 1 ? '' : 's'} asignada${citas === 1 ? '' : 's'}. ` +
-          'Reasígnalas o desactiva al usuario en lugar de eliminarlo.',
-      )
+  useEffect(() => {
+    if (!accessToken) {
+      setLoading(false)
       return
     }
-    if (window.confirm(`¿Eliminar a ${fullName(u)}? Esta acción no se puede deshacer.`)) {
-      deleteUser(u.id)
+
+    let active = true
+
+    const cargarUsuarios = async () => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const data = await usersApi.listar(accessToken, {
+          buscar: query,
+          rol: rol ? ROLE_TO_BACKEND[rol] : undefined,
+          page: page - 1,
+          size: PAGE_SIZE,
+        })
+
+        if (active) {
+          setResultado(data)
+        }
+      } catch (err) {
+        if (!active) return
+
+        setResultado(null)
+
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : 'No se pudo cargar el listado de usuarios.',
+        )
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
     }
+
+    void cargarUsuarios()
+
+    return () => {
+      active = false
+    }
+  }, [accessToken, query, rol, page])
+
+  const rows: User[] =
+    resultado?.contenido.map(mapUsuarioInterno) ?? []
+
+  const totalPages = Math.max(
+    1,
+    resultado?.totalPaginas ?? 1,
+  )
+
+  const applyFilter = (callback: () => void) => {
+    callback()
+    setPage(1)
   }
 
   return (
     <>
       <PageHead
         title="Usuarios"
-        description="Administra el acceso, la especialidad y la disponibilidad del equipo."
+        description="Administra el acceso y los datos del equipo."
         actions={
-          <Button icon="plus" onClick={() => navigate('/usuarios/nuevo')}>
+          <Button
+            icon="plus"
+            onClick={() => navigate('/usuarios/nuevo')}
+          >
             Nuevo usuario
           </Button>
         }
@@ -78,30 +102,67 @@ export function UsersPage() {
       <Card>
         <Toolbar>
           <SearchInput
-            placeholder="Buscar por nombre o correo…"
+            placeholder="Buscar por nombre, documento o correo…"
             value={query}
-            onChange={(e) => applyFilter(() => setQuery(e.target.value))}
+            onChange={(event) =>
+              applyFilter(() => setQuery(event.target.value))
+            }
           />
+
           <Select
             aria-label="Filtrar por rol"
             placeholder="Todos los roles"
             options={STAFF_ROLES}
             value={rol}
-            onChange={(e) => applyFilter(() => setRol(e.target.value as Role | ''))}
+            onChange={(event) =>
+              applyFilter(() => setRol(event.target.value))
+            }
             className="min-w-52"
           />
         </Toolbar>
 
-        <UsersTable
-          users={rows}
-          onDetail={(u) => navigate(`/usuarios/${u.id}`)}
-          onEdit={(u) => navigate(`/usuarios/${u.id}/editar`)}
-          onDelete={handleDelete}
-        />
+        {loading ? (
+          <div className="p-8 text-center text-muted">
+            Cargando usuarios…
+          </div>
+        ) : error ? (
+          <div role="alert" className="p-8 text-center">
+            <p className="text-danger">{error}</p>
 
-        <TableFoot summary={`${rows.length} de ${filtered.length} usuarios`}>
-          <Pagination page={current} totalPages={totalPages} onChange={setPage} />
-        </TableFoot>
+            <p className="mt-2 text-sm text-muted">
+              Comprueba la conexión con el backend e inténtalo de nuevo.
+            </p>
+          </div>
+        ) : (
+          <>
+            <UsersTable
+              users={rows}
+              onDetail={(user) =>
+                navigate(`/usuarios/${user.id}`)
+              }
+              onEdit={(user) =>
+                navigate(`/usuarios/${user.id}/editar`)
+              }
+              onDelete={() => {
+                window.alert(
+                  'La desactivación se conectará en el siguiente paso.',
+                )
+              }}
+            />
+
+            <TableFoot
+              summary={`${rows.length} de ${
+                resultado?.totalElementos ?? 0
+              } usuarios`}
+            >
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onChange={setPage}
+              />
+            </TableFoot>
+          </>
+        )}
       </Card>
     </>
   )

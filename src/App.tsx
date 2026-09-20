@@ -13,9 +13,15 @@ import { NewAppointmentPage } from '@/features/appointments/NewAppointmentPage'
 import { NewAppointmentSchedulePage } from '@/features/appointments/NewAppointmentSchedulePage'
 import { UsersPage } from '@/features/users/UsersPage'
 import { UserDetailPage } from '@/features/users/UserDetailPage'
-import { STAFF_ROLES } from '@/features/users/types'
-
-const PATIENT_ROLES = ['Paciente'] as const
+import { PATIENT_ROLES, STAFF_ROLES } from '@/features/users/types'
+import { TwoFactorPage } from '@/features/auth/TwoFactorPage'
+import { ForbiddenPage } from '@/features/errors/ForbiddenPage'
+import { NotFoundPage } from '@/features/errors/NotFoundPage'
+import { MyProfilePage } from '@/features/auth/MyProfilePage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
+import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
+import { RestartVerificationPage } from '@/features/auth/RestartVerificationPage'
 
 export default function App() {
   return (
@@ -23,17 +29,12 @@ export default function App() {
       {/* Pantallas públicas */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verificar-2fa" element={<TwoFactorPage />} />
         <Route path="/registro" element={<RegisterPage />} />
-        <Route path="/recuperar" element={<Placeholder title="Recuperar contraseña" />} />
-        <Route
-          path="/verificar-correo"
-          element={
-            <Placeholder
-              title="Verifica tu correo"
-              description="Te enviamos un código de verificación a tu correo electrónico para confirmar tu identidad."
-            />
-          }
-        />
+        <Route path="/recuperar" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verificar-correo" element={<VerifyEmailPage />} />
+        <Route path="/activar-cuenta-pendiente" element={<RestartVerificationPage />} />      
         <Route path="/terminos" element={<Placeholder title="Términos y condiciones" />} />
       </Route>
 
@@ -77,12 +78,13 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Con sesión: perfil, la raíz y lo no encontrado */}
+      {/* Rutas disponibles para cualquier usuario autenticado */}
       <Route element={<RequireAuth />}>
         <Route path="/" element={<HomeRedirect />} />
         <Route element={<AppShell />}>
-          <Route path="/perfil" element={<UserDetailPage isCurrentProfile />} />
-          <Route path="*" element={<Placeholder title="Página no encontrada" />} />
+          <Route path="/perfil" element={<MyProfilePage />} />
+          <Route path="/403" element={<ForbiddenPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
     </Routes>

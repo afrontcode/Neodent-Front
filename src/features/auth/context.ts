@@ -2,15 +2,23 @@ import { createContext } from 'react'
 import type { User } from '@/features/users/types'
 import type { Credentials, RegisterInput } from './types'
 
-/** Contrato de la sesión: quién está autenticado y cómo entrar, registrarse o salir. */
+export interface PendingTwoFactor {
+  challengeId: number
+  correo: string
+}
+
 export interface AuthStore {
-  /** Usuario autenticado, o `null` si no hay sesión. */
   user: User | null
-  /** Resuelve al iniciar sesión; rechaza con un mensaje legible si falla. */
+  accessToken: string | null
+  pendingTwoFactor: PendingTwoFactor | null
+  isLoading: boolean
+
   login: (credentials: Credentials) => Promise<void>
-  /** Resuelve si el correo está disponible; rechaza con un mensaje legible si no. */
+  verifyTwoFactor: (codigo: string) => Promise<void>
+  resendTwoFactor: () => Promise<void>
+
   register: (input: RegisterInput) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthStore | null>(null)

@@ -1,11 +1,23 @@
 import { Navigate } from 'react-router-dom'
+
 import { homeFor } from '@/config/navigation'
 import { useAuth } from './hooks'
 
-/** Reparte la raíz de la aplicación a la pantalla de inicio de cada rol. */
+/* Redirige al usuario autenticado hacia la página principal de su rol. */
 export function HomeRedirect() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
 
-  if (!user) return <Navigate to="/login" replace />
+  if (isLoading) {
+    return (
+      <div className="grid min-h-screen place-items-center text-ink-soft">
+        Cargando sesión…
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
   return <Navigate to={homeFor(user.rol)} replace />
 }

@@ -1,91 +1,212 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { parseId } from '@/lib/id'
-import { MIN_PASSWORD } from '@/lib/validation'
-import { MOCK_USERS } from '@/features/users/mock'
-import type { User } from '@/features/users/types'
-import { AuthContext, type AuthStore } from './context'
+import { useCallback, useEffect, useMemo, useState, type ReactNode, } from 'react'
+import { authApi, type AuthenticatedUserResponse, } from '@/api/authApi'
+import type { User, Role } from '@/features/users/types'
+import { AuthContext, type AuthStore, type PendingTwoFactor, } from './context'
 import type { Credentials, RegisterInput } from './types'
+import { restoreSession } from './sessionService'
 
-const STORAGE_KEY = 'neodents.session'
-const FAKE_LATENCY_MS = 600
+function mapBackendRole(roles: string[]): Role {
+  if (roles.includes('ADMIN')) return 'Administrador'
+  if (roles.includes('RECEPCIONISTA')) return 'Recepcionista'
+  if (roles.includes('ODONTOLOGO')) return 'Odontólogo'
+  if (roles.includes('PACIENTE')) return 'Paciente'
 
-/** Recupera la sesión guardada, si la hay. Tolera almacenamiento bloqueado. */
-function readStoredUser(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const id = parseId(raw)
-    return MOCK_USERS.find((u) => u.id === id) ?? null
-  } catch {
-    return null
+  throw new Error('El usuario no tiene un rol válido.')
+}
+
+function mapProfileToUser(profile: AuthenticatedUserResponse): User {
+  const rol = mapBackendRole(profile.roles)
+
+  return {
+    id: profile.idUsuario,
+    nombre: profile.nombres,
+    apellido: [
+      profile.apellidoPaterno,
+      profile.apellidoMaterno,
+    ]
+      .filter(Boolean)
+      .join(' '),
+
+    correo: profile.correo,
+    rol,
+    esp: '',
+    activo: profile.estado === 'ACTIVO',
+    tieneHorario: false,
+
+    ...(profile.idPaciente !== null
+      ? { pacId: profile.idPaciente }
+      : {}),
   }
 }
 
-function persist(user: User, remember: boolean) {
-  try {
-    const target = remember ? localStorage : sessionStorage
-    const other = remember ? sessionStorage : localStorage
-    target.setItem(STORAGE_KEY, String(user.id))
-    other.removeItem(STORAGE_KEY)
-  } catch {
-    /* sin almacenamiento: la sesión vive sólo en memoria */
-  }
-}
-
-function clearPersisted() {
-  try {
-    localStorage.removeItem(STORAGE_KEY)
-    sessionStorage.removeItem(STORAGE_KEY)
-  } catch {
-    /* nada que limpiar */
-  }
-}
-
-/**
- * Sesión de la aplicación. Hoy valida contra los usuarios de ejemplo (cualquier
- * correo registrado con una contraseña de al menos 6 caracteres). Es el único
- * punto que hay que cambiar para conectar el backend: sustituir `login` por la
- * llamada a la API y guardar el token en lugar del id.
- */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(readStoredUser)
+  const [user, setUser] = useState<User | null>(null)
 
-  const login = useCallback(async ({ correo, password, recordarme }: Credentials) => {
-    await new Promise((resolve) => setTimeout(resolve, FAKE_LATENCY_MS))
-
-    const email = correo.trim().toLowerCase()
-    const found = MOCK_USERS.find((u) => u.correo.toLowerCase() === email)
-    if (!found || password.length < MIN_PASSWORD) {
-      throw new Error('Correo o contraseña incorrectos.')
-    }
-    if (!found.activo) {
-      throw new Error('Tu cuenta está desactivada. Contacta al administrador.')
-    }
-
-    persist(found, recordarme)
-    setUser(found)
-  }, [])
-
-  const register = useCallback(async (input: RegisterInput) => {
-    await new Promise((resolve) => setTimeout(resolve, FAKE_LATENCY_MS))
-
-    const email = input.correo.trim().toLowerCase()
-    if (MOCK_USERS.some((u) => u.correo.toLowerCase() === email)) {
-      throw new Error('Ya existe una cuenta registrada con este correo.')
-    }
-    // Mock: todavía no hay backend, así que el registro no se persiste.
-    // Sustituir por la llamada a la API que crea la cuenta.
-  }, [])
-
-  const logout = useCallback(() => {
-    clearPersisted()
-    setUser(null)
-  }, [])
-
-  const value = useMemo<AuthStore>(
-    () => ({ user, login, register, logout }),
-    [user, login, register, logout],
+  const [accessToken, setAccessToken] = useState<string | null>(
+    null,
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  const [pendingTwoFactor, setPendingTwoFactor] =
+    useState<PendingTwoFactor | null>(null)
+
+  const [isLoading, setIsLoading] = useState(true)
+
+  const limpiarSesion = useCallback(() => {
+    setUser(null)
+    setAccessToken(null)
+    setPendingTwoFactor(null)
+  }, [])
+
+  /**
+   * Obtiene el perfil real antes de establecer la sesión.
+   * No guarda el JWT en localStorage ni sessionStorage.
+   */
+  const aplicarSesion = useCallback(async (token: string) => {
+    const profile = await authApi.me(token)
+
+    const authenticatedUser = mapProfileToUser(profile)
+
+    setAccessToken(token)
+    setUser(authenticatedUser)
+  }, [])
+
+  /**
+   * Restaura la sesión al recargar la página.
+   * El refresh token permanece en la cookie HttpOnly.
+   */
+  useEffect(() => {
+    let mounted = true
+
+    const restaurarSesion = async () => {
+      try {
+        const { accessToken: token, profile } = await restoreSession()
+
+        if (!mounted) return
+
+        setAccessToken(token)
+        setUser(mapProfileToUser(profile))
+      } catch {
+        if (!mounted) return
+
+        setAccessToken(null)
+        setUser(null)
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void restaurarSesion()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const login = useCallback(
+    async ({ correo, password }: Credentials) => {
+      const normalizedEmail = correo.trim().toLowerCase()
+
+      const response = await authApi.login(
+        normalizedEmail,
+        password,
+      )
+
+      if (!response.requiresTwoFactor || !response.challengeId) {
+        throw new Error(
+          'El servidor no devolvió un desafío de segundo factor válido.',
+        )
+      }
+
+      setPendingTwoFactor({
+        challengeId: response.challengeId,
+        correo: normalizedEmail,
+      })
+    },
+    [],
+  )
+
+  const verifyTwoFactor = useCallback(
+    async (codigo: string) => {
+      if (!pendingTwoFactor) {
+        throw new Error('No hay una verificación pendiente.')
+      }
+
+      const response = await authApi.verifyTwoFactor(
+        pendingTwoFactor.challengeId,
+        codigo,
+      )
+
+      await aplicarSesion(response.accessToken)
+
+      setPendingTwoFactor(null)
+    },
+    [pendingTwoFactor, aplicarSesion],
+  )
+
+  const resendTwoFactor = useCallback(async () => {
+    if (!pendingTwoFactor) {
+      throw new Error('No hay una verificación pendiente.')
+    }
+
+    const response = await authApi.resendCode(
+      pendingTwoFactor.challengeId,
+    )
+
+    setPendingTwoFactor((current) =>
+      current
+        ? {
+            ...current,
+            challengeId: response.challengeId,
+          }
+        : null,
+    )
+  }, [pendingTwoFactor])
+
+  const register = useCallback(async (_input: RegisterInput) => {
+    throw new Error(
+      'El registro será conectado al backend en el siguiente módulo.',
+    )
+  }, [])
+
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout()
+    } finally {
+      limpiarSesion()
+    }
+  }, [limpiarSesion])
+
+  const value = useMemo<AuthStore>(
+    () => ({
+      user,
+      accessToken,
+      pendingTwoFactor,
+      isLoading,
+
+      login,
+      verifyTwoFactor,
+      resendTwoFactor,
+      register,
+      logout,
+    }),
+    [
+      user,
+      accessToken,
+      pendingTwoFactor,
+      isLoading,
+      login,
+      verifyTwoFactor,
+      resendTwoFactor,
+      register,
+      logout,
+    ],
+  )
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
