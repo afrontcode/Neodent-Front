@@ -94,6 +94,22 @@ export interface VerifyRegistrationEmailResponse {
   message: string
 }
 
+export interface StaffInvitationResponse {
+  valid: boolean
+  nombrePaciente: string
+  emailMasked: string
+}
+export interface StaffActivationStartResponse {
+  challengeId: number
+  emailMasked: string
+  message: string
+}
+export interface StaffActivationCompleteResponse {
+  usuarioId: number
+  pacienteId: number | null
+  message: string
+}
+
 export const authApi = {
   login(email: string, password: string) {
     return apiRequest<LoginResponse>('/api/auth/login', {
@@ -229,5 +245,68 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email, password, turnstileToken }),
     })
+  },
+
+    validateStaffInvitation(token: string) {
+    return apiRequest<StaffInvitationResponse>('/api/auth/staff-activation/validate', {
+      method: 'POST', body: JSON.stringify({ token }),
+    })
+  },
+
+  startStaffActivation(token: string, numeroDocumento: string, turnstileToken: string) {
+    return apiRequest<StaffActivationStartResponse>('/api/auth/staff-activation/start', {
+      method: 'POST',
+      body: JSON.stringify({ token, tipoDocumento: 'DNI', numeroDocumento, turnstileToken }),
+    })
+  },
+
+  completeStaffActivation(token: string, challengeId: number, codigo: string, password: string) {
+    return apiRequest<StaffActivationCompleteResponse>('/api/auth/staff-activation/complete', {
+      method: 'POST', body: JSON.stringify({ token, challengeId, codigo, password }),
+    })
+  },
+
+    validatePatientInvitation(token: string) {
+    return apiRequest<StaffInvitationResponse>(
+      '/api/auth/account-activation/validate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      },
+    )
+  },
+
+  startPatientActivation(
+    token: string,
+    numeroDocumento: string,
+    turnstileToken: string,
+  ) {
+    return apiRequest<StaffActivationStartResponse>(
+      '/api/auth/account-activation/start',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          token,
+          tipoDocumento: 'DNI',
+          numeroDocumento,
+          turnstileToken,
+        }),
+      },
+    )
+  },
+
+  completePatientActivation(
+    token: string,
+    challengeId: number,
+    codigo: string,
+    password: string,
+  ) {
+    return apiRequest<StaffActivationCompleteResponse>(
+      '/api/auth/account-activation/complete',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token, challengeId, codigo, password }),
+      },
+    )
   },
 }

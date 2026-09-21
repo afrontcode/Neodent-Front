@@ -78,7 +78,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
           state={{ correo: values.correo.trim().toLowerCase() }}
           className="text-center text-sm font-semibold text-brand hover:underline"
         >
-          Activar mi cuenta →
+          Activar mi cuenta
         </Link>
       )}
 

@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { Alert, Button, Checkbox, Field, Icon, Input } from '@/components/ui'
+import { Alert, Button, Checkbox, Field, Icon, Input, FieldCheck, FieldError } from '@/components/ui'
 import { authApi } from '@/api/authApi'
 import { ApiError } from '@/api/apiClient'
 import { EMAIL_RE, MIN_PASSWORD } from '@/lib/validation'
 import type { RegisterInput } from '../types'
 import { SecurityVerification } from './SecurityVerification'
-import { FieldCheck } from './FieldCheck'
 
 type Errors = Partial<Record<keyof RegisterInput, string>>
 type DniStatus = 'idle' | 'waiting' | 'checking' | 'valid' | 'conflict' | 'error'
@@ -25,7 +24,6 @@ const INITIAL_VALUES: RegisterInput = {
 
 function validate(v: RegisterInput): Errors {
   const e: Errors = {}
-
   if (!DNI_RE.test(v.numeroDocumento)) e.numeroDocumento = 'El DNI debe tener exactamente 8 dígitos.'
   if (!v.nombres.trim()) e.nombres = 'Ingresa tus nombres.'
   if (!v.apellidoPaterno.trim()) e.apellidoPaterno = 'Ingresa tu apellido paterno.'
@@ -41,15 +39,13 @@ function validate(v: RegisterInput): Errors {
   if (!v.confirmPassword || v.confirmPassword !== v.password)
     e.confirmPassword = 'Las contraseñas no coinciden.'
   if (!v.aceptaTerminos) e.aceptaTerminos = 'Debes aceptar los términos y condiciones.'
-
   return e
 }
 
 function PasswordToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   return (
     <button type="button" onClick={onToggle}
-      aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-      aria-pressed={show}
+      aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={show}
       className="grid size-8 cursor-pointer place-items-center rounded-lg text-ink-soft transition-colors hover:text-ink">
       <Icon name={show ? 'eye' : 'eyeOff'} size={18} />
     </button>
@@ -95,19 +91,15 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     documentoActual.current = dni
     consultaActual.current++
     ultimoDniConsultado.current = null
-
     setDniValidado(null)
     setDniError(null)
     setDatosAutocompletados(false)
     setDniStatus(DNI_RE.test(dni) ? 'waiting' : 'idle')
     setErrors(e => ({
-      ...e,
-      numeroDocumento: dni.length > 8 ? 'El DNI debe tener exactamente 8 dígitos.' : undefined,
+      ...e, numeroDocumento: dni.length > 8 ? 'El DNI debe tener exactamente 8 dígitos.' : undefined,
     }))
-
     setValues(v => ({
-      ...v, numeroDocumento: dni, nombres: '',
-      apellidoPaterno: '', apellidoMaterno: '',
+      ...v, numeroDocumento: dni, nombres: '', apellidoPaterno: '', apellidoMaterno: '',
     }))
   }
 
@@ -125,14 +117,12 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       setDniStatus('valid')
       setDatosAutocompletados(!response.manualEntryRequired)
       setValues(v => ({
-        ...v,
-        nombres: response.nombres ?? '',
+        ...v, nombres: response.nombres ?? '',
         apellidoPaterno: response.apellidoPaterno ?? '',
         apellidoMaterno: response.apellidoMaterno ?? '',
       }))
     } catch (error) {
       if (consultaActual.current !== consultaId || documentoActual.current !== dni) return
-
       setDniValidado(null)
       setDatosAutocompletados(false)
 
@@ -144,7 +134,6 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
         setDniError(error instanceof Error ? error.message : 'No se pudo validar el DNI.')
       }
     } finally {
-      // Cada solicitud consume un token: solicitamos otro para la siguiente operación.
       setSecurityKey(k => k + 1)
     }
   }, [])
@@ -177,8 +166,19 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
     const found = validate(values)
     if (!dniEstaValidado) found.numeroDocumento = 'Primero debes validar tu DNI.'
-    setErrors(found)
-    if (Object.keys(found).length) return
+
+    // Conserva los errores del backend mientras el usuario no modifique el campo.
+    const merged = { ...found, ...Object.fromEntries(
+      (Object.entries(errors) as [keyof RegisterInput, string][])
+        .filter(([key, message]) => message && !found[key] && (
+          (key === 'correo' && EMAIL_RE.test(values.correo.trim())) ||
+          (key === 'telefono' && PHONE_RE.test(values.telefono)) ||
+          (key === 'numeroDocumento' && dniEstaValidado)
+        )),
+    ) } as Errors
+
+    setErrors(merged)
+    if (Object.values(merged).some(Boolean)) return
 
     if (!securityToken) {
       setServerError('Espera a que termine la verificación de seguridad.')
@@ -187,7 +187,6 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
     setSubmitting(true)
     setServerError(null)
-
     const token = securityToken
     setSecurityToken(null)
 
@@ -199,15 +198,14 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       if (error instanceof ApiError && error.status === 409) {
         const campo = /teléfono|telefono/i.test(message) ? 'telefono'
           : /correo|email/i.test(message) ? 'correo'
-          : /documento|DNI/i.test(message) ? 'numeroDocumento'
-          : null
+            : /documento|DNI/i.test(message) ? 'numeroDocumento'
+              : null
 
         if (campo) setErrors(current => ({ ...current, [campo]: message }))
         else setServerError(message)
       } else {
         setServerError(message)
       }
-
       setSecurityKey(current => current + 1)
     } finally {
       setSubmitting(false)
@@ -225,6 +223,9 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     password: values.password.length >= MIN_PASSWORD,
     confirmar: !!values.confirmPassword && values.confirmPassword === values.password,
   }
+
+  const indicador = (campo: keyof RegisterInput, valido: boolean) =>
+    errors[campo] ? <FieldError invalid /> : <FieldCheck valid={valido} />
 
   const dniIndicator = (
     <AnimatePresence mode="wait">
@@ -255,50 +256,43 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
       {serverError && (
-        <Alert variant="error" shake onClose={() => setServerError(null)}>
-          {serverError}
-        </Alert>
+        <Alert variant="error" shake onClose={() => setServerError(null)}>{serverError}</Alert>
       )}
 
       {/* Documento */}
       <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-        <Field label="Tipo de Documento">
-          <Input value="DNI" disabled />
-        </Field>
-
+        <Field label="Tipo de Documento"><Input value="DNI" disabled /></Field>
         <div className="min-w-0">
           <Field label="Número de Documento" error={errors.numeroDocumento}>
             <Input placeholder="Ej. 87654321" inputMode="numeric" maxLength={9}
-              value={values.numeroDocumento} disabled={submitting}
-              trailing={dniIndicator}
+              value={values.numeroDocumento} disabled={submitting} trailing={dniIndicator}
               onChange={e => handleDocumentChange(e.target.value)} />
           </Field>
 
-          {/* Sin espacio reservado: solo aparece cuando hay una observación */}
           <AnimatePresence initial={false}>
             {dniStatus === 'conflict' && (
               <motion.p key="conflict" role="alert"
                 initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }} className="overflow-hidden pt-1 text-[0.82rem] font-semibold leading-5 text-danger">
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden pt-1 text-[0.82rem] font-semibold leading-5 text-danger">
                 {dniError}{' '}
                 <Link to="/login" className="font-semibold text-brand hover:underline">Inicia sesión</Link>
               </motion.p>
             )}
-
             {dniStatus === 'error' && (
               <motion.p key="error" role="alert"
                 initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }} className="overflow-hidden pt-1 text-[0.82rem] font-semibold leading-5 text-danger">
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden pt-1 text-[0.82rem] font-semibold leading-5 text-danger">
                 {dniError}{' '}
                 <button type="button" onClick={handleRetryDni}
                   className="font-semibold text-brand hover:underline">Reintentar</button>
               </motion.p>
             )}
-
             {dniStatus === 'valid' && !datosAutocompletados && (
-              <motion.p key="manual"
-                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }} className="overflow-hidden pt-1 text-[0.82rem] font-semibold leading-5 text-ink-soft">
+              <motion.p key="manual" initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden pt-1 text-[0.82rem] font-semibold leading-5 text-ink-soft">
                 Completa tus datos manualmente.
               </motion.p>
             )}
@@ -310,7 +304,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       <Field label="Nombres" error={errors.nombres}>
         <Input icon="user" placeholder="Ej. María" autoComplete="given-name"
           value={values.nombres} disabled={!puedeEditarDatos}
-          trailing={<FieldCheck valid={valid.nombres} />}
+          trailing={indicador('nombres', valid.nombres)}
           onChange={e => update('nombres', e.target.value)} />
       </Field>
 
@@ -318,12 +312,12 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
         <Field label="Apellido Paterno" error={errors.apellidoPaterno}>
           <Input icon="user" placeholder="Ej. Rojas" autoComplete="family-name"
             value={values.apellidoPaterno} disabled={!puedeEditarDatos}
-            trailing={<FieldCheck valid={valid.paterno} />}
+            trailing={indicador('apellidoPaterno', valid.paterno)}
             onChange={e => update('apellidoPaterno', e.target.value)} />
         </Field>
         <Field label="Apellido Materno" error={errors.apellidoMaterno}>
           <Input icon="user" placeholder="Ej. Pérez" value={values.apellidoMaterno}
-            disabled={!puedeEditarDatos} trailing={<FieldCheck valid={valid.materno} />}
+            disabled={!puedeEditarDatos} trailing={indicador('apellidoMaterno', valid.materno)}
             onChange={e => update('apellidoMaterno', e.target.value)} />
         </Field>
       </div>
@@ -331,15 +325,14 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       {/* Datos de contacto */}
       <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
         <Field label="Fecha de Nacimiento" error={errors.fechaNacimiento}>
-          <Input icon="user" type="date" max={hoy}
-            value={values.fechaNacimiento} disabled={submitting}
-            onChange={e => update('fechaNacimiento', e.target.value)} />
+          <Input icon="user" type="date" max={hoy} value={values.fechaNacimiento}
+            disabled={submitting} onChange={e => update('fechaNacimiento', e.target.value)}
+            trailing={indicador('fechaNacimiento', valid.fecha)} />
         </Field>
-
         <Field label="Teléfono" error={errors.telefono}>
           <Input icon="user" placeholder="Ej. 987654321" inputMode="numeric" maxLength={9}
             autoComplete="tel" value={values.telefono} disabled={submitting}
-            trailing={<FieldCheck valid={valid.telefono} />}
+            trailing={indicador('telefono', valid.telefono)}
             onChange={e => update('telefono', e.target.value.replace(/\D/g, '').slice(0, 9))} />
         </Field>
       </div>
@@ -347,7 +340,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       <Field label="Correo electrónico" error={errors.correo}>
         <Input type="email" icon="mail" placeholder="Ingresa tu correo"
           autoComplete="email" value={values.correo} disabled={submitting}
-          trailing={<FieldCheck valid={valid.correo} />}
+          trailing={indicador('correo', valid.correo)}
           onChange={e => update('correo', e.target.value)} />
       </Field>
 
@@ -358,7 +351,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
           value={values.password} disabled={submitting}
           onChange={e => update('password', e.target.value)}
           trailing={<span className="flex items-center gap-1">
-            <FieldCheck valid={valid.password} />
+            {indicador('password', valid.password)}
             <PasswordToggle show={showPassword} onToggle={() => setShowPassword(v => !v)} />
           </span>} />
       </Field>
@@ -369,12 +362,12 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
           value={values.confirmPassword} disabled={submitting}
           onChange={e => update('confirmPassword', e.target.value)}
           trailing={<span className="flex items-center gap-1">
-            <FieldCheck valid={valid.confirmar} />
+            {indicador('confirmPassword', valid.confirmar)}
             <PasswordToggle show={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
           </span>} />
       </Field>
 
-      {/* Términos */}
+      {/* Términos y seguridad */}
       <div>
         <Checkbox checked={values.aceptaTerminos}
           onChange={e => update('aceptaTerminos', e.target.checked)}
@@ -383,7 +376,9 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
               Términos y condiciones
             </Link>
           </>} />
-        {errors.aceptaTerminos && <p className="mt-1 text-xs text-danger">{errors.aceptaTerminos}</p>}
+        {errors.aceptaTerminos && (
+          <p className="mt-1 text-xs text-danger">{errors.aceptaTerminos}</p>
+        )}
       </div>
 
       <SecurityVerification resetKey={securityKey} onToken={setSecurityToken} />

@@ -22,6 +22,29 @@ export interface UsuarioInternoResponse {
   especialidades: string[]
 }
 
+export interface CrearUsuarioInternoRequest {
+  correo: string
+  roles: string[]
+  tipoDocumentoId: number
+  numeroDocumento: string
+  nombres: string
+  apellidoPaterno: string
+  apellidoMaterno: string | null
+  telefono: string | null
+  numeroColegiatura: string | null
+  especialidadIds: number[]
+}
+
+export interface VerificarDocumentoPersonalResponse {
+  disponible: boolean
+  encontradoProveedor: boolean
+  permitirIngresoManual: boolean
+  nombres: string | null
+  apellidoPaterno: string | null
+  apellidoMaterno: string | null
+  message: string
+}
+
 export interface PaginaResponse<T> {
   contenido: T[]
   pagina: number
@@ -30,6 +53,11 @@ export interface PaginaResponse<T> {
   totalPaginas: number
   esPrimera: boolean
   esUltima: boolean
+}
+
+export interface EspecialidadResponse {
+  id: number
+  nombre: string
 }
 
 interface ListarUsuariosParams {
@@ -71,5 +99,24 @@ export const usersApi = {
         accessToken,
       },
     )
+  },
+
+  crear(accessToken: string, data: CrearUsuarioInternoRequest) {
+    return apiRequest<UsuarioInternoResponse>('/api/usuarios-internos', {
+      method: 'POST', accessToken, body: JSON.stringify(data),
+    })
+  },
+
+  verificarDocumento(accessToken: string, tipoDocumentoId: number, numeroDocumento: string) {
+    return apiRequest<VerificarDocumentoPersonalResponse>('/api/usuarios-internos/check-documento', {
+      method: 'POST', accessToken,
+      body: JSON.stringify({ tipoDocumentoId, numeroDocumento }),
+    })
+  },
+
+  listarEspecialidades(accessToken: string) {
+    return apiRequest<EspecialidadResponse[]>('/api/especialidades', {
+      method: 'GET', accessToken,
+    })
   },
 }

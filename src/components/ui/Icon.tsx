@@ -43,6 +43,7 @@ const ICONS = {
   braces: <><rect x="2.5" y="8" width="19" height="8" rx="2.5" /><path d="M7 8v8M12 8v8M17 8v8" /><circle cx="4.8" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="9.5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="14.5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19.2" cy="12" r="1" fill="currentColor" stroke="none" /></>,
   forceps: <><path d="M7.5 2.5l3.4 7.2M16.5 2.5l-3.4 7.2" /><path d="M12 10c-1.2 0-2 .6-2.6 1.4-.7 1-.6 2.4-.3 3.9.3 1.4.4 3.2 1.3 3.2.8 0 1-1.4 1.6-1.4s.8 1.4 1.6 1.4c.9 0 1-1.8 1.3-3.2.3-1.5.4-2.9-.3-3.9-.6-.8-1.4-1.4-2.6-1.4z" /></>,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  chevronsUpDown: <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />,
 }
 
 export type IconName = keyof typeof ICONS
