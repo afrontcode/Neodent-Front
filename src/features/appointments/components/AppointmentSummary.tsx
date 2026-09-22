@@ -1,6 +1,5 @@
 import { Avatar, Badge, Card, InfoRow } from '@/components/ui'
 import { isoToDMY } from '@/lib/format'
-import { avatarSeed } from '@/lib/people'
 import { useData } from '@/store/hooks'
 import type { Appointment } from '../types'
 import { statusTone } from '../utils'
@@ -16,7 +15,7 @@ export function AppointmentSummary({ appointment: a }: { appointment: Appointmen
         <Avatar
           nombre={patient?.nombre ?? '?'}
           apellido={patient?.apellido ?? ''}
-          seed={avatarSeed(a.pacId)}
+          //seed={avatarSeed(a.pacId)}
         />
         <div>
           <h2 className="text-[1.05rem] font-bold">{pacName(a.pacId)}</h2>

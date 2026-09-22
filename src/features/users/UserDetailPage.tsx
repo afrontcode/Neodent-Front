@@ -1,20 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import {
-  Avatar,
-  BackLink,
-  Badge,
-  Button,
-  Card,
-  Icon,
-  InfoRow,
-  StatusDot,
-} from '@/components/ui'
+import { Avatar, BackLink, Badge, Button, Card, Icon, InfoRow, StatusDot,} from '@/components/ui'
 import { useAuth } from '@/features/auth/hooks'
 import { statusTone } from '@/features/appointments/utils'
 import { roleTone } from '@/features/users/utils'
 import { isoToDMY } from '@/lib/format'
 import { parseId } from '@/lib/id'
-import { avatarSeed, fullName } from '@/lib/people'
+import { fullName } from '@/lib/people'
 import { useData } from '@/store/hooks'
 
 interface UserDetailPageProps {
@@ -60,7 +51,7 @@ export function UserDetailPage({ isCurrentProfile = false }: UserDetailPageProps
             <Avatar
               nombre={user.nombre}
               apellido={user.apellido}
-              seed={avatarSeed(user.id)}
+              //seed={avatarSeed(user.id)}
               size={110}
               animate="always"
               trackCursor={true}

@@ -1,84 +1,80 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Button, Card, Icon } from '@/components/ui'
-import { CodeInput } from './components/CodeInput'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
+import { Alert, Button, Card, Icon, OtpInput } from '@/components/ui'
+import { authApi } from '@/api/authApi'
 import { useAuth } from './hooks'
-import { CODE_LENGTH, RESEND_SECONDS, TEST_CODE, maskEmail } from './verification'
 
-/** La raíz reparte a cada rol su pantalla de inicio. */
-const HOME = '/'
+const INITIAL_COOLDOWN_SECONDS = 45
 
-/**
- * Confirmación del correo con el código de un solo uso. Se llega aquí desde el
- * registro (al terminar se vuelve al login) y desde el inicio de sesión de una
- * cuenta sin verificar (al terminar se entra a la aplicación).
- */
+interface RegistrationState {
+  challengeId: number
+  correo: string
+}
+
 export function VerifyEmailPage() {
-  const { pending, verify, resend, cancelVerification } = useAuth()
-  const navigate = useNavigate()
+  const { user, isLoading } = useAuth()
   const location = useLocation()
-  const from: string = location.state?.from ?? HOME
+  const registration = location.state as RegistrationState | null
 
-  const [code, setCode] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [challengeId, setChallengeId] = useState(registration?.challengeId ?? 0)
+  const [codigo, setCodigo] = useState('')
+  const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
-  const [seconds, setSeconds] = useState(RESEND_SECONDS)
-  /** La verificación ya terminó: no redirigir aunque `pending` quede vacío. */
-  const [done, setDone] = useState(false)
-  // El código se envía al entrar, así que la cuenta atrás arranca con la pantalla.
-  const submittedCode = useRef('')
+  const [verified, setVerified] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState(INITIAL_COOLDOWN_SECONDS)
 
   useEffect(() => {
-    if (seconds <= 0) return
-    const timer = setTimeout(() => setSeconds((s) => s - 1), 1000)
-    return () => clearTimeout(timer)
-  }, [seconds])
+    if (countdown <= 0) return
+    const timer = window.setInterval(() => {
+      setCountdown(prev => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [countdown])
 
-  if (!pending && !done) return <Navigate to="/login" replace />
+  const formatCountdown = (seconds: number) =>
+    `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60)
+      .toString()
+      .padStart(2, '0')}`
 
-  const correo = pending?.correo ?? ''
-  const desdeRegistro = pending?.motivo === 'registro'
+  const handleVerify = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!challengeId || loading || !/^\d{6}$/.test(codigo)) return
 
-  const submit = async (value: string) => {
-    if (submitting || value.length < CODE_LENGTH) return
-    submittedCode.current = value
-    setSubmitting(true)
+    setLoading(true)
     setError(null)
+    setMessage(null)
+
     try {
-      await verify(value)
-      setDone(true)
-      if (desdeRegistro) {
-        navigate('/login', { replace: true, state: { verificado: true, correo } })
-      } else {
-        navigate(from, { replace: true })
-      }
+      const response = await authApi.verifyRegistrationEmail(challengeId, codigo)
+
+      if (!response.verified) throw new Error(response.message)
+
+      setVerified(true)
     } catch (err) {
+      setCodigo('')
       setError(err instanceof Error ? err.message : 'No se pudo verificar el código.')
-      setCode('')
     } finally {
-      setSubmitting(false)
+      setLoading(false)
     }
   }
 
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault()
-    void submit(code)
-  }
-
-  const handleChange = (value: string) => {
-    setCode(value)
-    // Deja de señalar el error en cuanto se corrige el código rechazado.
-    if (value !== submittedCode.current) setError(null)
-  }
-
   const handleResend = async () => {
+    if (!challengeId || countdown > 0 || resending || loading) return
+
     setResending(true)
     setError(null)
+    setMessage(null)
+
     try {
-      await resend()
-      setCode('')
-      setSeconds(RESEND_SECONDS)
+      const response = await authApi.resendCode(challengeId)
+
+      setChallengeId(response.challengeId)
+      setCodigo('')
+      setCountdown(60)
+      setMessage(response.message || 'Te enviamos un nuevo código a tu correo.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo reenviar el código.')
     } finally {
@@ -86,87 +82,153 @@ export function VerifyEmailPage() {
     }
   }
 
+  if (isLoading) return <p className="text-center text-muted">Cargando…</p>
+  if (user) return <Navigate to="/" replace />
+  if (!registration?.challengeId || !registration.correo)
+    return <Navigate to="/registro" replace />
+
   return (
-    <Card className="px-8 py-9 max-sm:px-5">
-      <header className="mb-7 text-center">
-        <span className="mx-auto mb-4 grid size-14 place-items-center rounded-full bg-brand-soft text-brand">
-          <Icon name="mail" size={28} />
-        </span>
-        <h2 className="text-[1.5rem] font-bold text-ink">Verifica tu correo</h2>
-        <p className="mt-1 text-[0.92rem] text-muted">
-          Ingresa el código de {CODE_LENGTH} dígitos que enviamos a{' '}
-          <strong className="font-bold text-ink">{maskEmail(correo)}</strong>
-        </p>
-      </header>
-
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
-        {error && (
-          <div
-            role="alert"
-            className="flex items-center gap-2.5 rounded-control border border-danger/30 bg-danger-soft px-4 py-3 text-[0.88rem] text-danger"
-          >
-            <Icon name="warning" size={18} />
-            {error}
-          </div>
-        )}
-
-        <CodeInput
-          label="Código de verificación"
-          length={CODE_LENGTH}
-          value={code}
-          onChange={handleChange}
-          onComplete={submit}
-          disabled={submitting}
-          invalid={Boolean(error)}
-          describedBy="codigo-ayuda"
-        />
-
-        {/* Mientras no haya backend el código no llega por correo: se muestra
-            aquí para poder recorrer el flujo. Quitar al conectar la API. */}
-        <p id="codigo-ayuda" className="text-center text-[0.82rem] text-muted">
-          Código de prueba: <strong className="font-bold text-ink-soft">{TEST_CODE}</strong>
-        </p>
-
-        <Button
-          type="submit"
-          disabled={submitting || code.length < CODE_LENGTH}
-          className="w-full justify-center disabled:opacity-60"
+    <AnimatePresence mode="wait">
+      {!verified ? (
+        <motion.div
+          key="verification"
+          initial={{ opacity: 0, y: 18, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -12, scale: 0.985 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         >
-          {submitting ? 'Verificando…' : 'Verificar'}
-        </Button>
-      </form>
+          <Card className="rounded-[28px] border border-line/70 bg-surface px-8 py-10 shadow-sm sm:px-10 sm:py-12">
+            <header className="text-center">
+              <h2 className="text-[1.55rem] font-bold text-ink sm:text-[1.65rem]">
+                Verifica tu correo
+              </h2>
 
-      <p className="mt-6 text-center text-[0.9rem] text-ink-soft">
-        ¿No recibiste el código?{' '}
-        {seconds > 0 ? (
-          <span className="text-muted">Reenviar en {seconds}s</span>
-        ) : (
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resending}
-            className="cursor-pointer font-bold text-brand hover:underline disabled:cursor-default disabled:text-muted disabled:no-underline"
-          >
-            {resending ? 'Enviando…' : 'Reenviar código'}
-          </button>
-        )}
-      </p>
+              <p className="mx-auto mt-2 max-w-[320px] text-[0.88rem] leading-relaxed text-muted">
+                Ingresa el código de 6 dígitos enviado a{' '}
+                <strong>{registration.correo}</strong>.
+              </p>
+            </header>
 
-      <div className="my-6 flex items-center gap-3 text-[0.85rem] text-muted" aria-hidden="true">
-        <span className="h-px flex-1 bg-line" />
-        O
-        <span className="h-px flex-1 bg-line" />
-      </div>
+            <form onSubmit={handleVerify} className="mt-8 flex flex-col gap-6">
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                  >
+                    <Alert variant="error" shake onClose={() => setError(null)}>
+                      {error}
+                    </Alert>
+                  </motion.div>
+                )}
 
-      <p className="text-center text-[0.92rem] text-ink-soft">
-        <Link
-          to={desdeRegistro ? '/registro' : '/login'}
-          onClick={cancelVerification}
-          className="font-bold text-brand hover:underline"
+                {message && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                  >
+                    <Alert variant="success" onClose={() => setMessage(null)}>
+                      {message}
+                    </Alert>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="py-2">
+                <OtpInput
+                  value={codigo}
+                  length={6}
+                  disabled={loading}
+                  isError={Boolean(error)}
+                  onChange={value => {
+                    setCodigo(value)
+                    if (error) setError(null)
+                  }}
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading || codigo.length !== 6}
+                className="h-12 w-full justify-center rounded-xl text-base font-semibold disabled:opacity-50"
+              >
+                {loading ? 'Verificando…' : 'Verificar código'}
+              </Button>
+
+              <div className="flex items-center justify-center gap-1.5 text-[0.88rem]">
+                <span className="text-muted">¿No lo recibiste?</span>
+
+                <button
+                  type="button"
+                  disabled={resending || countdown > 0}
+                  onClick={handleResend}
+                  className="cursor-pointer font-medium text-brand hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
+                >
+                  {resending ? 'Reenviando…' : 'Reenviar código'}
+                </button>
+
+                {countdown > 0 && (
+                  <span className="font-semibold text-[#f97316]">
+                    {formatCountdown(countdown)}
+                  </span>
+                )}
+              </div>
+            </form>
+          </Card>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="success"
+          initial={{ opacity: 0, y: 18, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         >
-          {desdeRegistro ? 'Usar otro correo' : 'Volver al inicio de sesión'}
-        </Link>
-      </p>
-    </Card>
+          <Card className="rounded-[28px] border border-line/70 bg-surface px-8 py-12 text-center shadow-sm sm:px-10 sm:py-14">
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.08 }}
+              className="mx-auto grid size-14 place-items-center rounded-full bg-success text-white"
+            >
+              <Icon name="check" size={28} />
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-6 text-[1.55rem] font-bold text-ink"
+            >
+              ¡Cuenta activada!
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="mx-auto mt-2 max-w-[320px] text-[0.9rem] leading-relaxed text-ink-soft"
+            >
+              Tu correo fue verificado correctamente. Ya puedes iniciar sesión en NeoDent.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="mt-8"
+            >
+              <Link
+                to="/login"
+                className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand-dark"
+              >
+                Continuar
+              </Link>
+            </motion.div>
+          </Card>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

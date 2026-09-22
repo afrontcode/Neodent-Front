@@ -1,7 +1,6 @@
 import { Avatar } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { isoToDMY } from '@/lib/format'
-import { avatarSeed } from '@/lib/people'
 import type { User } from '@/features/users/types'
 
 interface SpecialistCardProps {
@@ -30,7 +29,12 @@ export function SpecialistCard({ doctor, proximaCita, selected, onSelect }: Spec
         selected ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:bg-hover',
       )}
     >
-      <Avatar nombre={doctor.nombre} apellido={doctor.apellido} seed={avatarSeed(doctor.id)} size={56} />
+      <Avatar
+        nombre={doctor.nombre}
+        apellido={doctor.apellido}
+        //seed={avatarSeed(doctor.id)}
+        size={56}
+      />
 
       <span className="min-w-0">
         <span className="block font-bold text-ink">

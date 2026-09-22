@@ -1,19 +1,25 @@
 import type { Id } from '@/lib/id'
 
-export const ROLES = ['Odontólogo', 'Administrador', 'Paciente'] as const
+export const ROLES = [
+  'Odontólogo',
+  'Administrador',
+  'Recepcionista',
+  'Paciente',
+] as const
+
 export type Role = (typeof ROLES)[number]
 
-/**
- * Roles del equipo del centro. La pantalla de Usuarios administra sólo a estas
- * personas; las cuentas de pacientes se crean desde el registro público.
- */
-export const STAFF_ROLES = ['Odontólogo', 'Administrador'] as const
+export const STAFF_ROLES = [
+  'Odontólogo',
+  'Administrador',
+  'Recepcionista',
+] as const
+
 export type StaffRole = (typeof STAFF_ROLES)[number]
 
-export const ESPECIALIDADES = [
-  'Ortodoncia', 'Endodoncia', 'Periodoncia', 'Prostodoncia',
-  'Odontopediatría', 'Cirugía oral', 'Odontología general',
-] as const
+export const PATIENT_ROLES = ['Paciente'] as const
+
+export type PatientRole = (typeof PATIENT_ROLES)[number]
 
 export interface User {
   id: Id

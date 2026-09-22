@@ -1,45 +1,61 @@
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { Card } from '@/components/ui'
-import { RegisterForm } from './components/RegisterForm'
+import { authApi } from '@/api/authApi'
 import { useAuth } from './hooks'
+import { RegisterForm } from './components/RegisterForm'
 import type { RegisterInput } from './types'
 
-/** La raíz reparte a cada rol su pantalla de inicio. */
-const HOME = '/'
-
 export function RegisterPage() {
-  const { user, register } = useAuth()
+  const { user, isLoading } = useAuth()
   const navigate = useNavigate()
 
-  if (user) return <Navigate to={HOME} replace />
+  const handleSubmit = async (input: RegisterInput, turnstileToken: string) => {
+    const response = await authApi.registerPatient({
+      dni: input.numeroDocumento.trim(),
+      nombres: input.nombres.trim(),
+      apellidoPaterno: input.apellidoPaterno.trim(),
+      apellidoMaterno: input.apellidoMaterno.trim() || null,
+      fechaNacimiento: input.fechaNacimiento || null,
+      telefono: input.telefono.trim(),
+      email: input.correo.trim().toLowerCase(),
+      direccion: null,
+      password: input.password,
+      turnstileToken,
+    })
 
-  const handleSubmit = async (input: RegisterInput) => {
-    // El registro deja el correo pendiente de confirmar: se sigue con el código.
-    await register(input)
-    navigate('/verificar-correo', { replace: true })
+    navigate('/verificar-correo', {
+      replace: true,
+      state: {
+        challengeId: response.challengeId,
+        correo: input.correo.trim().toLowerCase(),
+      },
+    })
   }
 
+  if (isLoading) return <p className="text-center text-muted">Cargando…</p>
+  if (user) return <Navigate to="/" replace />
+
   return (
-    <Card className="px-8 py-9 max-sm:px-5">
-      <header className="mb-7 text-center">
-        <h2 className="text-[1.5rem] font-bold text-ink">Registro</h2>
-        <p className="mt-1 text-[0.92rem] text-muted">Regístrate para poder programar citas</p>
-      </header>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}>
+      <Card className="px-8 py-10 sm:px-10 lg:px-12">
+        <header className="mb-7 text-center">
+          <h2 className="text-2xl font-bold text-ink">Crear cuenta</h2>
+          <p className="mt-2 text-sm text-muted">
+            Completa tus datos para registrarte como paciente.
+          </p>
+        </header>
 
-      <RegisterForm onSubmit={handleSubmit} />
+        <RegisterForm onSubmit={handleSubmit} />
 
-      <div className="my-6 flex items-center gap-3 text-[0.85rem] text-muted" aria-hidden="true">
-        <span className="h-px flex-1 bg-line" />
-        O
-        <span className="h-px flex-1 bg-line" />
-      </div>
-
-      <p className="text-center text-[0.92rem] text-ink-soft">
-        ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className="font-bold text-brand hover:underline">
-          Inicia sesión
-        </Link>
-      </p>
-    </Card>
+        <p className="mt-7 text-center text-sm text-ink-soft">
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="font-bold text-brand hover:underline">
+            Inicia sesión
+          </Link>
+        </p>
+      </Card>
+    </motion.div>
   )
 }

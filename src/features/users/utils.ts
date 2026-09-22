@@ -2,8 +2,9 @@ import type { BadgeTone } from '@/components/ui'
 import type { Role, User } from './types'
 
 export const roleTone: Record<Role, BadgeTone> = {
-  'Odontólogo': 'green',
+  Odontólogo: 'green',
   Administrador: 'blue',
+  Recepcionista: 'blue',
   Paciente: 'gray',
 }
 
@@ -18,3 +19,4 @@ export const isPatient = (u: Pick<User, 'rol'>) => u.rol === 'Paciente'
  */
 export const missingSchedule = (u: Pick<User, 'rol' | 'tieneHorario'>) =>
   isDentist(u) && !u.tieneHorario
+

@@ -1,15 +1,4 @@
-import {
-  ActionsCell,
-  Avatar,
-  Badge,
-  Icon,
-  KebabMenu,
-  StatusDot,
-  Table,
-  TableState,
-  type Column,
-} from '@/components/ui'
-import { avatarSeed } from '@/lib/people'
+import { ActionsCell, Avatar, Badge, Icon, KebabMenu, StatusDot, Table, TableState, type Column,} from '@/components/ui'
 import type { User } from '../types'
 import { missingSchedule, roleTone } from '../utils'
 
@@ -40,7 +29,14 @@ export function UsersTable({ users, onDetail, onEdit, onDelete }: UsersTableProp
         <tr key={u.id}>
           <td>
             <div className="flex items-center gap-3">
-              <Avatar nombre={u.nombre} apellido={u.apellido} seed={avatarSeed(u.id)} size={44} animate="always" trackCursor={false}/>
+              <Avatar
+                nombre={u.nombre}
+                apellido={u.apellido}
+                //seed={avatarSeed(u.id)}
+                size={44}
+                animate="always"
+                trackCursor={false}
+              />
               <div>
                 <div className="font-bold">
                   {u.nombre} {u.apellido}
