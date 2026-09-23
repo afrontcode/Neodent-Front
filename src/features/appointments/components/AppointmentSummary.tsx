@@ -1,8 +1,8 @@
-import { Avatar, Badge, Card, InfoRow } from '@/components/ui'
-import { isoToDMY } from '@/lib/format'
-import { useData } from '@/store/hooks'
-import type { Appointment } from '../types'
-import { statusTone } from '../utils'
+import { Avatar, Badge, Card, InfoRow } from '@/shared/components/ui'
+import { isoToDMY } from '@/shared/lib/format'
+import { useData } from '@/legacy/demo-store/useDemoData'
+import type { Appointment } from '../model/appointments.types'
+import { statusTone } from '../model/appointments.utils'
 
 /** Tarjeta de sólo lectura con los datos de la cita. */
 export function AppointmentSummary({ appointment: a }: { appointment: Appointment }) {

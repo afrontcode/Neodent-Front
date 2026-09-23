@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Checkbox, Field, Icon, Input } from '@/components/ui'
-import { ApiError } from '@/api/apiClient'
-import { EMAIL_RE } from '@/lib/validation'
-import type { Credentials } from '../types'
+import { Alert, Button, Checkbox, Field, Icon, Input } from '@/shared/components/ui'
+import { ApiError } from '@/shared/api/apiClient'
+import { EMAIL_RE } from '@/shared/lib/validation'
+import type { Credentials } from '../model/auth.types'
 
 interface Errors {
   correo?: string

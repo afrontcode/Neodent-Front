@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom'
 
-import { homeFor } from '@/config/navigation'
-import { useAuth } from './hooks'
+import { homeFor } from '@/app/navigation'
+import { useAuth } from './model/useAuth'
 
 /* Redirige al usuario autenticado hacia la página principal de su rol. */
 export function HomeRedirect() {

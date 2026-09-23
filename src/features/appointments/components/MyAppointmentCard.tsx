@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { Badge, Icon, KebabMenu } from '@/components/ui'
-import { longDateNoYear, time12h } from '@/lib/format'
-import { canActOn, type Appointment } from '../types'
-import { statusTone } from '../utils'
+import { Badge, Icon, KebabMenu } from '@/shared/components/ui'
+import { longDateNoYear, time12h } from '@/shared/lib/format'
+import { canActOn, type Appointment } from '../model/appointments.types'
+import { statusTone } from '../model/appointments.utils'
 
 /** Columna de la tarjeta: rótulo gris encima del dato. */
 function Cell({ label, children }: { label: string; children: ReactNode }) {

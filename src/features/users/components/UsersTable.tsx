@@ -1,6 +1,6 @@
-import { ActionsCell, Avatar, Badge, Icon, KebabMenu, StatusDot, Table, TableState, type Column,} from '@/components/ui'
-import type { User } from '../types'
-import { missingSchedule, roleTone } from '../utils'
+import { ActionsCell, Avatar, Badge, Icon, KebabMenu, StatusDot, Table, TableState, type Column,} from '@/shared/components/ui'
+import type { User } from '../model/users.types'
+import { missingSchedule, roleTone } from '../model/users.utils'
 
 const COLUMNS: Column[] = [
   { label: 'Nombre y apellido' },

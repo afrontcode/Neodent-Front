@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { Alert, Button, Checkbox, Field, Icon, Input, FieldCheck, FieldError } from '@/components/ui'
-import { authApi } from '@/api/authApi'
-import { ApiError } from '@/api/apiClient'
-import { EMAIL_RE, MIN_PASSWORD } from '@/lib/validation'
-import type { RegisterInput } from '../types'
+import { Alert, Button, Checkbox, Field, Icon, Input, FieldCheck, FieldError } from '@/shared/components/ui'
+import { authApi } from '../api/authApi'
+import { ApiError } from '@/shared/api/apiClient'
+import { EMAIL_RE, MIN_PASSWORD } from '@/shared/lib/validation'
+import type { RegisterInput } from '../model/auth.types'
 import { SecurityVerification } from './SecurityVerification'
 
 type Errors = Partial<Record<keyof RegisterInput, string>>

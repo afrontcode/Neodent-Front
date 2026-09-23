@@ -7,11 +7,11 @@ import {
   Table,
   TableState,
   type Column,
-} from '@/components/ui'
-import type { Id } from '@/lib/id'
-import { isoToDMY, longDate, money } from '@/lib/format'
-import { canActOn, type Appointment } from '../types'
-import { paymentTone, statusTone } from '../utils'
+} from '@/shared/components/ui'
+import type { Id } from '@/shared/lib/id'
+import { isoToDMY, longDate, money } from '@/shared/lib/format'
+import { canActOn, type Appointment } from '../model/appointments.types'
+import { paymentTone, statusTone } from '../model/appointments.utils'
 
 const COLUMNS: Column[] = [
   { label: 'Fecha' },

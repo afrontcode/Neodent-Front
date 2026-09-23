@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Field, Input, Select } from '@/components/ui'
+import { Button, Card, Field, Input, Select } from '@/shared/components/ui'
 import {
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
@@ -7,7 +7,7 @@ import {
   type PaymentInput,
   type PaymentMethod,
   type PaymentStatus,
-} from '../types'
+} from '../model/appointments.types'
 
 interface PaymentFormProps {
   appointment: Appointment

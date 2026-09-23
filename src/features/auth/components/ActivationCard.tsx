@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { motion } from 'motion/react'
-import { Card, Icon } from '@/components/ui'
+import { Card, Icon } from '@/shared/components/ui'
 
 type ActivationCardProps = {
   title: string

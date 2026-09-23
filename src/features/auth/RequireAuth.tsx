@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import type { Role } from '@/features/users/types'
-import { useAuth } from './hooks'
+import type { Role } from '@/domain/identity'
+import { useAuth } from './model/useAuth'
 
 interface RequireAuthProps {
   roles?: readonly Role[]
