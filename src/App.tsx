@@ -24,6 +24,7 @@ import { VerifyEmailPage } from '@/features/auth/VerifyEmailPage'
 import { RestartVerificationPage } from '@/features/auth/RestartVerificationPage'
 import { NewUserPage } from '@/features/users/NewUserPage'
 import { AccountActivationPage } from '@/features/auth/AccountActivationPage'
+import { DashboardPage } from '@/features/dashboard/DashboardPage'
 
 const ADMIN_ROLES: readonly Role[] = ['Administrador']
 
@@ -111,6 +112,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<HomeRedirect />} />
         <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/perfil" element={<MyProfilePage />} />
           <Route path="/403" element={<ForbiddenPage />} />
           <Route path="*" element={<NotFoundPage />} />

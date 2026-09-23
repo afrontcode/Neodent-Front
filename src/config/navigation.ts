@@ -7,21 +7,47 @@ export interface NavItem {
   href: string
 }
 
-/** Menú del equipo del centro: administradores y odontólogos. */
-const STAFF_NAV: NavItem[] = [
+const DASHBOARD: NavItem = {
+  label: 'DASHBOARD',
+  icon: 'calendar',
+  href: '/dashboard',
+}
+
+const ADMIN_NAV: NavItem[] = [
+  DASHBOARD,
   { label: 'USUARIOS', icon: 'usuarios', href: '/usuarios' },
   { label: 'CITAS', icon: 'citas', href: '/citas' },
   { label: 'PACIENTES', icon: 'pacientes', href: '/pacientes' },
 ]
 
-/** Menú del paciente: sólo su propia agenda. */
-const PATIENT_NAV: NavItem[] = [{ label: 'MIS CITAS', icon: 'citas', href: '/mis-citas' }]
+const RECEPTION_NAV: NavItem[] = [
+  DASHBOARD,
+  { label: 'CITAS', icon: 'citas', href: '/citas' },
+  { label: 'PACIENTES', icon: 'pacientes', href: '/pacientes' },
+]
 
-/**
- * Menú lateral según el rol. Añadir o quitar entradas aquí para cambiar la
- * navegación de cada tipo de cuenta.
- */
-export const navItemsFor = (rol: Role): NavItem[] => (rol === 'Paciente' ? PATIENT_NAV : STAFF_NAV)
+const DENTIST_NAV: NavItem[] = [
+  DASHBOARD,
+  { label: 'CITAS', icon: 'citas', href: '/citas' },
+  { label: 'PACIENTES', icon: 'pacientes', href: '/pacientes' },
+]
 
-/** Pantalla de inicio de cada rol, a donde se entra tras iniciar sesión. */
-export const homeFor = (rol: Role): string => (rol === 'Paciente' ? '/mis-citas' : '/citas')
+const PATIENT_NAV: NavItem[] = [
+  DASHBOARD,
+  { label: 'MIS CITAS', icon: 'citas', href: '/mis-citas' },
+]
+
+export const navItemsFor = (rol: Role): NavItem[] => {
+  switch (rol) {
+    case 'Administrador':
+      return ADMIN_NAV
+    case 'Recepcionista':
+      return RECEPTION_NAV
+    case 'Odontólogo':
+      return DENTIST_NAV
+    case 'Paciente':
+      return PATIENT_NAV
+  }
+}
+
+export const homeFor = (_rol: Role): string => '/dashboard'
