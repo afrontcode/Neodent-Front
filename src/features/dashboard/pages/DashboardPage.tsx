@@ -356,45 +356,6 @@ function WeeklyReports() {
     },
   ]
 
-  return (
-    <motion.div {...cardAnimation}>
-      <Card className="p-5">
-        <SectionTitle
-          title="Resumen semanal"
-          detail="Indicadores principales de NeoDents."
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          {reports.map(report => (
-            <div
-              key={report.title}
-              className="rounded-xl border border-line p-3.5"
-            >
-              <span
-                className={`mb-3 grid size-9 place-items-center rounded-lg ${
-                  ACCENT_STYLES[report.accent]
-                }`}
-              >
-                <Icon name={report.icon} size={18} />
-              </span>
-
-              <p className="text-2xl font-bold text-ink">
-                {report.value}
-              </p>
-
-              <p className="mt-1 text-xs font-semibold text-ink">
-                {report.title}
-              </p>
-
-              <p className="mt-1 text-[0.7rem] text-muted">
-                {report.detail}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </motion.div>
-  )
 }
 
 function ServicesPanel() {
@@ -406,7 +367,7 @@ function ServicesPanel() {
           detail="Distribución de servicios realizados."
         />
 
-        <div className="mx-auto h-[190px] w-full max-w-[240px]">
+        <div className="mx-auto h-[160px] w-full max-w-[240px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -621,6 +582,51 @@ export function DashboardPage() {
         }
         />
 
+        {(isReception || isDentist) && (
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="relative flex min-h-[190px] items-center overflow-hidden rounded-[24px] bg-gradient-to-r from-[#EAF3FF] via-[#F4F8FF] to-white px-6 py-8 shadow-sm sm:px-8"
+        >
+          <div className="pointer-events-none absolute -right-10 -top-12 size-48 rounded-full bg-[#D5E8FF]/60 blur-2xl" />
+
+          <div className="relative z-10 max-w-[68%]">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand">
+              {isDentist ? 'Tu espacio clínico' : 'Tu espacio de recepción'}
+            </p>
+
+            <h2 className="mt-3 text-2xl font-bold text-ink sm:text-3xl">
+              {isDentist ? '¡Listo para una nueva jornada!' : '¡Bienvenido a NeoDents!'}
+            </h2>
+
+            <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">
+              {isDentist
+                ? 'Consulta tu agenda y accede a las atenciones de tus pacientes.'
+                : 'Organiza las citas del día y acompaña a cada paciente desde su llegada.'}
+            </p>
+
+            <Link
+              to={isDentist ? '/citas' : '/pacientes'}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-95"
+            >
+              {isDentist ? 'Ver mi agenda' : 'Gestionar pacientes'}
+              <Icon name="chevronRight" size={16} />
+            </Link>
+          </div>
+
+          <motion.img
+            src="/illustrations/dentista.svg"
+            alt=""
+            aria-hidden="true"
+            initial={{ opacity: 0, x: 16, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ duration: 0.55, ease: 'easeOut', delay: 0.12 }}
+            className="pointer-events-none absolute -bottom-12 -right-9 w-48 select-none sm:-bottom-16 sm:right-0 sm:w-64 lg:w-72"
+          />
+        </motion.section>
+      )}
+
       {/* Indicadores del rol */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric, index) => (
@@ -659,7 +665,6 @@ export function DashboardPage() {
 
           {/* Panel derecho, inspirado en tu referencia */}
           <aside className="space-y-5">
-            <WeeklyReports />
             <ServicesPanel />
           </aside>
         </div>

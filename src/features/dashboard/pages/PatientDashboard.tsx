@@ -83,7 +83,7 @@ function NextAppointment() {
 
   return (
     <motion.section {...appear}>
-      <div className="relative overflow-hidden rounded-[24px] bg-[#246FE9] p-6 text-white shadow-[0_12px_30px_rgba(36,111,233,0.16)] sm:p-8">
+      <div className="relative overflow-hidden rounded-[24px] bg-[#0053db] p-6 text-white shadow-[0_12px_30px_rgba(36,111,233,0.16)] sm:p-8">
         {/* Decoración visual */}
         <div className="pointer-events-none absolute -right-14 -top-20 size-64 rounded-full border-[35px] border-white/10" />
         <div className="pointer-events-none absolute -bottom-28 right-32 size-48 rounded-full bg-white/5" />
@@ -266,24 +266,55 @@ export function PatientDashboard() {
   return (
     <div className="space-y-6">
       {/* Cabecera */}
-      <motion.header {...appear} className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-brand">
-            MI ESPACIO EN NEODENTS
-          </p>
+      <motion.header
+        {...appear}
+        className="relative isolate min-h-[205px] overflow-hidden rounded-[24px] border border-[#C9DFFF] bg-gradient-to-r from-[#EAF3FF] via-[#F3F8FF] to-[#EAF4FF] px-5 py-6 shadow-[0_8px_28px_rgba(40,120,240,0.06)] sm:min-h-[235px] sm:px-9 sm:py-9"
+      >
+        {/* Fondo decorativo */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-8 -right-12 size-48 rounded-full bg-[#B9E5FF]/75 sm:-right-14 sm:-top-16 sm:bottom-auto sm:size-[350px] lg:-right-8 lg:-top-20 lg:size-[410px]"
+        />
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-16 top-5 hidden size-40 rounded-full bg-white/35 blur-2xl sm:block"
+        />
+
+        {/* Texto */}
+        <div className="relative z-10">
+          <span className="inline-flex rounded-full bg-white px-3 py-1.5 text-[10px] font-bold tracking-wide text-brand shadow-sm sm:text-[11px]">
+            MI ESPACIO EN NEODENTS
+          </span>
+
+          <h1 className="mt-4 text-[22px] font-bold leading-tight tracking-tight text-ink sm:text-3xl">
             ¡Bienvenido a tu espacio!
           </h1>
 
-          <p className="mt-2 text-sm text-muted">
-            Consulta tus próximas atenciones y gestiona tus citas desde aquí.
+          <p className="mt-2 max-w-[58%] text-xs leading-5 text-ink-soft sm:max-w-md sm:text-sm sm:leading-6">
+            Tu sonrisa empieza aquí. Consulta tus próximas atenciones y
+            gestiona tus citas de manera sencilla.
           </p>
+
+          <span className="mt-4 inline-flex rounded-full border border-[#F1D79C] bg-[#FFF7E5] px-3 py-1 text-[10px] font-bold text-[#9A6B1C] sm:text-[11px]">
+            VISTA DEMO
+          </span>
         </div>
 
-        <span className="rounded-full border border-[#F1D79C] bg-[#FFF7E5] px-3 py-1.5 text-xs font-bold text-[#9A6B1C]">
-          VISTA DEMO
-        </span>
+        {/* Muelita: a la derecha en móvil y escritorio */}
+        <motion.img
+          src="/illustrations/muelita.svg"
+          alt=""
+          aria-hidden="true"
+          initial={{ opacity: 0, scale: 0.9, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{
+            duration: 0.55,
+            ease: 'easeOut',
+            delay: 0.12,
+          }}
+          className="pointer-events-none absolute bottom-0 right-[-18px] z-0 w-[170px] select-none drop-shadow-[0_12px_15px_rgba(22,90,160,0.16)] sm:bottom-[-46px] sm:right-1 sm:w-[290px] lg:bottom-[-58px] lg:right-8 lg:w-[345px]"
+        />
       </motion.header>
 
       {/* Próxima cita destacada */}
