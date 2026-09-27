@@ -1,202 +1,436 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'motion/react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Avatar, BackLink, Badge, Button, Card, Icon, InfoRow, StatusDot,} from '@/shared/components/ui'
+import { Avatar, BackLink, Badge, Button, Card, Icon, InfoRow, } from '@/shared/components/ui'
+import { apiBlob, } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth'
-import { statusTone } from '@/features/appointments'
-import { roleTone } from '@/domain'
-import { isoToDMY } from '@/shared/lib/format'
-import { parseId } from '@/shared/lib/id'
-import { fullName } from '@/shared/lib/people'
-import { useData } from '@/legacy/demo-store/useDemoData'
+import { documentTypesApi, type TipoDocumentoOption } from '@/shared/api/documentTypesApi'
+import { usersApi, type UsuarioInternoResponse, } from '../api/usersApi'
 
-interface UserDetailPageProps {
-  isCurrentProfile?: boolean
+const NOMBRES_ROL: Record<string, string> = {
+  ADMIN: 'Administrador',
+  RECEPCIONISTA: 'Recepcionista',
+  ODONTOLOGO: 'Odontólogo',
 }
 
-export function UserDetailPage({ isCurrentProfile = false }: UserDetailPageProps) {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const { user: authUser } = useAuth()
-  const { userById, appointments, pacName } = useData()
+function nombreCompleto(usuario: UsuarioInternoResponse) {
+  return [
+    usuario.nombres,
+    usuario.apellidoPaterno,
+    usuario.apellidoMaterno,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
 
-  const targetId = isCurrentProfile
-    ? (authUser?.id ?? 1)
-    : id
-      ? parseId(id)
-      : (authUser?.id ?? 1)
-  const user = userById(targetId)
-
-  if (!user) {
-    return (
-      <>
-        <BackLink to="/usuarios">Volver a Usuarios</BackLink>
-        <Card className="grid place-items-center gap-3 px-6 py-20 text-center text-muted">
-          <Icon name="warning" size={28} />
-          <p className="text-[0.95rem]">El usuario no existe o no se encuentra disponible.</p>
-        </Card>
-      </>
-    )
+function estadoCuenta(usuario: UsuarioInternoResponse) {
+  if (usuario.estado === 'PENDIENTE') {
+    return {
+      texto: 'Pendiente de activación',
+      tono: 'amber' as const,
+    }
   }
 
-  const userAppointments = appointments.filter((a) => a.docId === user.id)
-  const isDoctor = user.rol === 'Odontólogo'
+  if (usuario.estado === 'BLOQUEADO') {
+    return {
+      texto: 'Cuenta bloqueada',
+      tono: 'red' as const,
+    }
+  }
+
+  if (
+    usuario.estado === 'ACTIVO' &&
+    usuario.personalActivo
+  ) {
+    return {
+      texto: 'Cuenta activa',
+      tono: 'green' as const,
+    }
+  }
+
+  return {
+    texto: 'Cuenta inactiva',
+    tono: 'gray' as const,
+  }
+}
+
+export function UserDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { accessToken } = useAuth()
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+
+  const usuarioId = Number(id)
+
+  const idValido =
+    Number.isSafeInteger(usuarioId) &&
+    usuarioId > 0
+
+  const [usuario, setUsuario] =
+    useState<UsuarioInternoResponse | null>(null)
+  const [tiposDocumento, setTiposDocumento] =
+    useState<TipoDocumentoOption[]>([])
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [actualizacion, setActualizacion] = useState(0)
+
+  // CONSULTAR LOS DATOS REALES DEL USUARIO.
+  useEffect(() => {
+    if (!accessToken || !idValido) {
+      setUsuario(null)
+
+      setError(
+        idValido
+          ? 'No se encontró una sesión activa.'
+          : 'El identificador del usuario no es válido.',
+      )
+
+      setLoading(false)
+      return
+    }
+
+    let activo = true
+
+    setLoading(true)
+    setError('')
+
+    Promise.all([
+      usersApi.obtener(accessToken, usuarioId),
+      documentTypesApi.listar().catch(() => [] as TipoDocumentoOption[]),
+    ])
+      .then(([userData, docsData]) => {
+        if (activo) {
+          setUsuario(userData)
+          if (docsData.length > 0) {
+            setTiposDocumento(docsData)
+          }
+        }
+      })
+      .catch(err => {
+        if (!activo) return
+
+        setUsuario(null)
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'No se pudo consultar el usuario.',
+        )
+      })
+      .finally(() => {
+        if (activo) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      activo = false
+    }
+  }, [
+    accessToken,
+    usuarioId,
+    idValido,
+    actualizacion,
+  ])
+
+  useEffect(() => {
+    if (!accessToken || !usuario?.odontologoId || !usuario.fotoNombreArchivo) {
+      setFotoUrl(null)
+      return
+    }
+
+    let activo = true
+    let url: string | null = null
+
+    apiBlob(
+      `/api/odontologos/${usuario.odontologoId}/foto`,
+      accessToken,
+    )
+      .then(blob => {
+        if (!activo) return
+
+        url =
+          URL.createObjectURL(
+            blob,
+          )
+
+        setFotoUrl(url)
+      })
+      .catch(() => {
+        if (activo) {
+          setFotoUrl(null)
+        }
+      })
+
+    return () => {
+      activo = false
+
+      if (url) {
+        URL.revokeObjectURL(
+          url,
+        )
+      }
+    }
+  }, [
+    accessToken,
+    usuario?.odontologoId,
+    usuario?.fotoNombreArchivo,
+  ])
+
+  const esOdontologo =
+    usuario?.roles.includes('ODONTOLOGO') ?? false
+
+  const estado = usuario
+    ? estadoCuenta(usuario)
+    : null
+
+  const tipoDoc = tiposDocumento.find(t => t.id === usuario?.tipoDocumentoId)
+  const documentoTexto = usuario
+    ? tipoDoc
+      ? `${tipoDoc.codigo} · ${usuario.numeroDocumento}`
+      : usuario.numeroDocumento
+    : 'No registrado'
 
   return (
-    <div className="space-y-6">
-      {!isCurrentProfile && <BackLink to="/usuarios">Volver a Usuarios</BackLink>}
+    <>
+      <BackLink to="/usuarios">
+        Volver a Usuarios
+      </BackLink>
 
-      {/* Hero Header Card con Avatar Gigante Interactivo */}
-      <Card className="overflow-hidden p-6 sm:p-8">
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8">
-          <div className="relative">
-            <Avatar
-              nombre={user.nombre}
-              apellido={user.apellido}
-              //seed={avatarSeed(user.id)}
-              size={110}
-              animate="always"
-              trackCursor={true}
-              className="ring-4 ring-brand-soft shadow-md"
-            />
-            <span
-              title={user.activo ? 'Usuario Activo' : 'Usuario Inactivo'}
-              className={`absolute bottom-1 right-1 size-5 rounded-full border-2 border-surface ${
-                user.activo ? 'bg-success' : 'bg-danger'
-              }`}
-            />
-          </div>
+      {/* CARGA */}
+      {loading && (
+        <Card className="mt-4 flex items-center justify-center gap-3 p-12">
+          <Icon
+            name="spinner"
+            size={22}
+            className="animate-spin text-brand"
+          />
 
-          <div className="flex-1 text-center sm:text-left">
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-              <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-                {fullName(user)}
-              </h1>
-              <Badge tone={roleTone[user.rol]}>{user.rol}</Badge>
-            </div>
+          <p className="text-sm text-muted">
+            Cargando información del trabajador…
+          </p>
+        </Card>
+      )}
 
-            <p className="mt-1 text-base text-ink-soft">
-              {user.esp} • <span className="text-muted">{user.correo}</span>
-            </p>
+      {/* ERROR */}
+      {!loading && error && (
+        <Card className="mt-4 flex flex-col items-center gap-4 p-10 text-center">
+          <Icon
+            name="warning"
+            size={32}
+            className="text-danger"
+          />
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm sm:justify-start">
-              <StatusDot on={user.activo}>
-                {user.activo ? 'Cuenta activa' : 'Cuenta inactiva'}
-              </StatusDot>
-              {isDoctor && (
-                <span className="flex items-center gap-1.5 text-muted">
-                  <Icon name="calendar" size={16} />
-                  {user.tieneHorario ? 'Horario configurado' : 'Sin horario registrado'}
-                </span>
-              )}
-            </div>
-          </div>
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
 
-          <div className="flex flex-wrap gap-2.5">
-            <Button
-              variant="ghost"
-              icon="edit"
-              onClick={() => navigate(`/usuarios/${user.id}/editar`)}
-            >
-              Editar datos
-            </Button>
-          </div>
-        </div>
+          <Button
+            variant="ghost"
+            onClick={() => setActualizacion(n => n + 1)}
+          >
+            Intentar nuevamente
+          </Button>
+        </Card>
+      )}
 
-        {/* Métricas rápidas */}
-        {isDoctor && (
-          <div className="mt-8 grid grid-cols-2 gap-4 border-t border-line pt-6 sm:grid-cols-3">
-            <div className="rounded-xl bg-alt p-4 text-center">
-              <div className="text-2xl font-bold text-brand">{userAppointments.length}</div>
-              <div className="text-xs text-muted">Citas asignadas</div>
-            </div>
-            <div className="rounded-xl bg-alt p-4 text-center">
-              <div className="text-2xl font-bold text-success">
-                {userAppointments.filter((a) => a.estado === 'Atendida').length}
+      {/* FICHA REAL */}
+      {!loading && usuario && !error && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="mt-4 space-y-5"
+        >
+          {/* ENCABEZADO */}
+          <Card className="overflow-hidden p-6 sm:p-8">
+            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8">
+
+              <div className="relative shrink-0">
+                {fotoUrl ? (
+                  <img src={fotoUrl} alt={`Foto de ${nombreCompleto(usuario)}`} 
+                    className="size-[100px] rounded-full object-cover ring-4 ring-brand-soft shadow-md"/>
+                ) : (
+                  <Avatar
+                    nombre={usuario.nombres}
+                    apellido={usuario.apellidoPaterno}
+                    seed={usuario.usuarioId}
+                    size={100}
+                    animate="hover"
+                    trackCursor={false}
+                    className="ring-4 ring-brand-soft shadow-md"
+                  />
+                )}
+
+                <span
+                  title={estado?.texto}
+                  className={`absolute bottom-1 right-1 size-5 rounded-full border-2 border-surface ${
+                    estado?.tono === 'green'
+                      ? 'bg-emerald-500'
+                      : estado?.tono === 'amber'
+                        ? 'bg-amber-500'
+                        : 'bg-slate-400'
+                  }`}
+                />
               </div>
-              <div className="text-xs text-muted">Citas atendidas</div>
-            </div>
-            <div className="col-span-2 rounded-xl bg-alt p-4 text-center sm:col-span-1">
-              <div className="text-2xl font-bold text-ink">
-                {user.tieneHorario ? 'Disponible' : 'No disp.'}
-              </div>
-              <div className="text-xs text-muted">Estado de agenda</div>
-            </div>
-          </div>
-        )}
-      </Card>
 
-      {/* Grid de detalles y contenido */}
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        {/* Columna Izquierda: Información Detallada */}
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
-              <Icon name="usuarios" size={20} className="text-brand" />
-              Información de la cuenta
-            </h2>
-            <InfoRow label="Nombre completo" value={fullName(user)} />
-            <InfoRow label="Correo institucional" value={user.correo} />
-            <InfoRow label="Rol en el sistema" value={<Badge tone={roleTone[user.rol]}>{user.rol}</Badge>} />
-            <InfoRow label="Especialidad médica" value={user.esp || 'No aplica'} />
-            <InfoRow label="Identificador (ID)" value={`#${user.id}`} />
-            <InfoRow
-              label="Disponibilidad de atención"
-              value={user.tieneHorario ? 'Lunes a Viernes (8:00 - 18:00)' : 'Sin horario registrado'}
-            />
+              <div className="min-w-0 flex-1 text-center sm:text-left">
+                <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+                  {nombreCompleto(usuario)}
+                </h1>
+
+                <p className="mt-2 break-words text-sm text-muted">
+                  {usuario.correo}
+                </p>
+
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  {usuario.roles.map(rol => (
+                    <Badge
+                      key={rol}
+                      tone={
+                        rol === 'ODONTOLOGO'
+                          ? 'green'
+                          : rol === 'ADMIN'
+                            ? 'blue'
+                            : 'gray'
+                      }
+                    >
+                      {NOMBRES_ROL[rol] ?? rol}
+                    </Badge>
+                  ))}
+
+                  {estado && (
+                    <Badge tone={estado.tono}>
+                      {estado.texto}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                icon="edit"
+                onClick={() =>
+                  navigate(
+                    `/usuarios/${usuario.usuarioId}/editar`,
+                  )
+                }
+              >
+                Editar datos
+              </Button>
+
+            </div>
           </Card>
 
-          <Card className="p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
-              <Icon name="file" size={20} className="text-brand" />
-              Seguridad y Sesión
-            </h2>
-            <InfoRow label="Estado del acceso" value={<StatusDot on={user.activo}>{user.activo ? 'Permitido' : 'Bloqueado'}</StatusDot>} />
-            <InfoRow label="Método de acceso" value="Credenciales Neodent" />
-            <InfoRow label="Última actividad" value="Hoy, 10:45 AM" />
-          </Card>
-        </div>
+          {/* INFORMACIÓN REAL */}
+          <div className="grid items-start gap-5 lg:grid-cols-2">
 
-        {/* Columna Derecha: Citas Asociadas o Actividad */}
-        <div className="space-y-6">
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
-                <Icon name="citas" size={20} className="text-brand" />
-                {isDoctor ? 'Citas del especialista' : 'Actividad del usuario'}
+            {/* CONTACTO E IDENTIDAD */}
+            <Card className="p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                <Icon
+                  name="user"
+                  size={20}
+                  className="text-brand"
+                />
+                Contacto e identidad
               </h2>
-              {isDoctor && userAppointments.length > 0 && (
-                <span className="text-xs font-bold text-muted">
-                  {userAppointments.length} total
-                </span>
-              )}
-            </div>
 
-            {userAppointments.length === 0 ? (
-              <div className="grid place-items-center py-10 text-center text-muted">
-                <Icon name="calendar" size={32} className="mb-2 opacity-50" />
-                <p className="text-sm">No hay citas registradas para este usuario.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {userAppointments.slice(0, 5).map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex cursor-pointer items-center justify-between py-3 transition hover:bg-hover"
-                    onClick={() => navigate(`/citas/${a.id}`)}
-                  >
-                    <div>
-                      <div className="font-bold text-ink">{pacName(a.pacId)}</div>
-                      <div className="text-xs text-muted">
-                        {isoToDMY(a.fecha)} • {a.hora} • {a.lugar}
-                      </div>
-                    </div>
-                    <Badge tone={statusTone[a.estado]}>{a.estado}</Badge>
+              <InfoRow
+                label="Documento"
+                value={documentoTexto}
+              />
+
+              <InfoRow
+                label="Teléfono"
+                value={usuario.telefono || 'No registrado'}
+              />
+
+              <InfoRow
+                label="Correo electrónico"
+                value={
+                  <span className="break-all">
+                    {usuario.correo}
+                  </span>
+                }
+              />
+            </Card>
+
+            {/* INFORMACIÓN PROFESIONAL O ROL */}
+            {esOdontologo ? (
+              <Card className="p-6">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                  <Icon
+                    name="tooth"
+                    size={20}
+                    className="text-brand"
+                  />
+                  Información profesional
+                </h2>
+
+                <InfoRow
+                  label="Número de colegiatura (COP)"
+                  value={
+                    usuario.numeroColegiatura ||
+                    'No registrado'
+                  }
+                />
+
+                <div className="border-t border-line pt-4 pb-1">
+                  <p className="text-[0.95rem] text-ink-soft">
+                    Especialidades
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {usuario.especialidades.length > 0 ? (
+                      usuario.especialidades.map(esp => (
+                        <span
+                          key={esp}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-soft px-3 py-1 text-xs font-semibold text-brand"
+                        >
+                          <Icon name="tooth" size={12} />
+                          {esp}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm font-medium text-muted">
+                        Sin especialidades asignadas
+                      </span>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-6">
+                <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                  <Icon
+                    name="lock"
+                    size={20}
+                    className="text-brand"
+                  />
+                  Acceso y funciones
+                </h2>
+
+                <InfoRow
+                  label="Roles asignados"
+                  value={
+                    usuario.roles
+                      .map(rol => NOMBRES_ROL[rol] ?? rol)
+                      .join(', ')
+                  }
+                />
+
+                <InfoRow
+                  label="Estado de la cuenta"
+                  value={estado?.texto || 'No disponible'}
+                />
+              </Card>
             )}
-          </Card>
-        </div>
-      </div>
-    </div>
+
+          </div>
+        </motion.div>
+      )}
+    </>
   )
 }

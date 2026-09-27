@@ -2,33 +2,26 @@ import { Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/app/layouts/AppShell'
 import { AuthLayout } from '@/app/layouts/AuthLayout'
 import { Placeholder } from '@/shared/components/ui'
-import {
-  HomeRedirect,
-  LoginPage,
-  RegisterPage,
-  RequireAuth,
-  TwoFactorPage,
-  ForgotPasswordPage,
-  ResetPasswordPage,
-  VerifyEmailPage,
-  RestartVerificationPage,
-  AccountActivationPage,
-  MyProfilePage,
+import { HomeRedirect, LoginPage, RegisterPage, RequireAuth,
+  TwoFactorPage, ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage,
+  RestartVerificationPage, AccountActivationPage, MyProfilePage,
 } from '@/features/auth'
-import {
-  AppointmentsPage,
-  AppointmentDetailPage,
-  MyAppointmentsPage,
-  NewAppointmentPage,
-  NewAppointmentSchedulePage,
+import { AppointmentsPage, AppointmentDetailPage, MyAppointmentsPage, 
+  NewAppointmentPage, NewAppointmentSchedulePage, NewAppointmentConfirmPage, 
 } from '@/features/appointments'
-import { UsersPage, UserDetailPage, NewUserPage } from '@/features/users'
+import { UsersPage, UserDetailPage, NewUserPage, EditUserPage, } from '@/features/users'
 import { DashboardPage } from '@/features/dashboard'
 import { ForbiddenPage } from '@/app/pages/ForbiddenPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { PATIENT_ROLES, STAFF_ROLES, type Role } from '@/domain/identity'
+import { SedesPage } from '@/features/sedes/pages/SedesPage'
+import { EspecialidadesPage } from '@/features/especialidades/pages/EspecialidadesPage'
+import { ServiciosPage } from '@/features/servicios/pages/ServiciosPage'
+import { PatientsPage, PatientDetailPage, NewPatientPage, EditPatientPage, } from '@/features/patients'
+import { RolesPage } from '@/features/roles'
 
 const ADMIN_ROLES: readonly Role[] = ['Administrador']
+const ADMIN_RECEPTION_ROLES: readonly Role[] = ['Administrador', 'Recepcionista']
 
 export function AppRouter() {
   return (
@@ -53,34 +46,28 @@ export function AppRouter() {
           <Route path="/citas" element={<AppointmentsPage />} />
           <Route path="/citas/nueva" element={<Placeholder title="Agendar cita" />} />
           <Route path="/citas/:id" element={<AppointmentDetailPage />} />
-          <Route
-            path="/citas/:id/reprogramar"
-            element={<Placeholder title="Reprogramar cita" />}
-          />
+          <Route path="/citas/:id/reprogramar" element={<Placeholder title="Reprogramar cita" />} />
 
-          <Route
-            path="/pacientes"
-            element={
-              <Placeholder
-                title="Pacientes"
-                description="Listado de pacientes del centro."
-              />
-            }
-          />
-          <Route
-            path="/pacientes/:id"
-            element={<Placeholder title="Ficha del paciente" />}
-          />
+          <Route path="/pacientes" element={<PatientsPage />} />
+          <Route path="/pacientes/:id" element={<PatientDetailPage />} />
 
-          {/* Administración de usuarios: solo ADMIN */}
+          <Route element={<RequireAuth roles={ADMIN_RECEPTION_ROLES} />}>
+            <Route path="/pacientes/nuevo" element={<NewPatientPage />} />
+            <Route path="/pacientes/:id/editar" element={<EditPatientPage />} />
+          </Route>
+
+
+          {/* Administración: solo ADMIN */}
           <Route element={<RequireAuth roles={ADMIN_ROLES} />}>
             <Route path="/usuarios" element={<UsersPage />} />
             <Route path="/usuarios/nuevo" element={<NewUserPage />} />
             <Route path="/usuarios/:id" element={<UserDetailPage />} />
-            <Route
-              path="/usuarios/:id/editar"
-              element={<Placeholder title="Editar usuario" />}
-            />
+            <Route path="/usuarios/:id/editar" element={<EditUserPage />} />
+            <Route path="/roles" element={<RolesPage />} />
+
+            <Route path="/sedes" element={<SedesPage />} />
+            <Route path="/especialidades" element={<EspecialidadesPage />} />
+            <Route path="/servicios" element={<ServiciosPage />} />
           </Route>
         </Route>
       </Route>
@@ -89,24 +76,11 @@ export function AppRouter() {
       <Route element={<RequireAuth roles={PATIENT_ROLES} />}>
         <Route element={<AppShell />}>
           <Route path="/mis-citas" element={<MyAppointmentsPage />} />
+          <Route path="/mis-citas/:id" element={<AppointmentDetailPage />} />
           <Route path="/mis-citas/nueva" element={<NewAppointmentPage />} />
-          <Route
-            path="/mis-citas/nueva/fecha-y-hora"
-            element={<NewAppointmentSchedulePage />}
-          />
-          <Route
-            path="/mis-citas/nueva/confirmar"
-            element={
-              <Placeholder
-                title="Confirmar cita"
-                description="Paso 3 de la reserva: revisa y confirma los datos."
-              />
-            }
-          />
-          <Route
-            path="/mis-citas/:id/reprogramar"
-            element={<Placeholder title="Reprogramar cita" />}
-          />
+          <Route path="/mis-citas/nueva/fecha-y-hora" element={<NewAppointmentSchedulePage />} />
+          <Route path="/mis-citas/nueva/confirmar" element={<NewAppointmentConfirmPage />} />
+          <Route path="/mis-citas/:id/reprogramar" element={<Placeholder title="Reprogramar cita" />} />
         </Route>
       </Route>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Card, Field, Input, Select } from '@/shared/components/ui'
+import { AnimatedSelect, Button, Card, Field, Input } from '@/shared/components/ui'
 import {
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
@@ -47,10 +47,11 @@ export function PaymentForm({ appointment, onSubmit }: PaymentFormProps) {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Estado del pago">
-          <Select
-            options={PAYMENT_STATUSES}
+          <AnimatedSelect
+            label="Estado del pago"
+            options={PAYMENT_STATUSES.map(s => ({ value: s, label: s }))}
             value={pago}
-            onChange={(e) => setPago(e.target.value as PaymentStatus)}
+            onChange={valor => setPago(valor as PaymentStatus)}
           />
         </Field>
         <Field label="Precio" hint="Monto en soles (S/)." error={error}>
@@ -67,11 +68,15 @@ export function PaymentForm({ appointment, onSubmit }: PaymentFormProps) {
 
       <div className="mt-5">
         <Field label="Tipo de pago">
-          <Select
-            options={PAYMENT_METHODS}
+          <AnimatedSelect
+            label="Tipo de pago"
             placeholder="Sin definir"
+            options={[
+              { value: '', label: 'Sin definir' },
+              ...PAYMENT_METHODS.map(m => ({ value: m, label: m })),
+            ]}
             value={tipoPago}
-            onChange={(e) => setTipoPago(e.target.value as PaymentMethod | '')}
+            onChange={valor => setTipoPago(valor as PaymentMethod | '')}
           />
         </Field>
       </div>

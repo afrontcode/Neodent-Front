@@ -60,7 +60,8 @@ export interface AuthenticatedUserResponse {
 }
 
 export interface PatientRegistrationCheckResponse {
-  dni: string
+  tipoDocumento: string
+  numeroDocumento: string
   nombres: string | null
   apellidoPaterno: string | null
   apellidoMaterno: string | null
@@ -68,7 +69,8 @@ export interface PatientRegistrationCheckResponse {
 }
 
 export interface PatientRegistrationRequest {
-  dni: string
+  tipoDocumento: string
+  numeroDocumento: string
   nombres: string
   apellidoPaterno: string
   apellidoMaterno: string | null

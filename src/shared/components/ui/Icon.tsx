@@ -15,8 +15,10 @@ const ICONS = {
   plus: <path d="M12 5v14M5 12h14" />,
   printer: <><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2" /><rect x="6" y="14" width="12" height="7" rx="1" /></>,
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  chevronUp: <path d="M18 15l-6-6-6 6" />,
   chevronLeft: <path d="M15 18l-6-6 6-6" />,
   chevronRight: <path d="M9 18l6-6-6-6" />,
+  arrowLeft: <><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></>,
   edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></>,
   trash: <><path d="M3 6h18M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v5M14 11v5" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>,
@@ -35,6 +37,7 @@ const ICONS = {
   lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></>,
   eyeOff: <><path d="M2 10s3.5 6 10 6 10-6 10-6" /><path d="M12 16v3M8 15.4L6.5 18M16 15.4l1.5 2.6M4.6 13.3L2.8 15.4M19.4 13.3l1.8 2.1" /></>,
   mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>,
+  phone: <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
   question: <><path d="M9.2 9.3a3 3 0 115.3 2.2c-.9 1-2 1.4-2 2.8" /><path d="M12 18h.01" /></>,
   /* Servicios odontológicos */
@@ -44,6 +47,7 @@ const ICONS = {
   forceps: <><path d="M7.5 2.5l3.4 7.2M16.5 2.5l-3.4 7.2" /><path d="M12 10c-1.2 0-2 .6-2.6 1.4-.7 1-.6 2.4-.3 3.9.3 1.4.4 3.2 1.3 3.2.8 0 1-1.4 1.6-1.4s.8 1.4 1.6 1.4c.9 0 1-1.8 1.3-3.2.3-1.5.4-2.9-.3-3.9-.6-.8-1.4-1.4-2.6-1.4z" /></>,
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   chevronsUpDown: <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />,
+  mapPin: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
 }
 
 export type IconName = keyof typeof ICONS

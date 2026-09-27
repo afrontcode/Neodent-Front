@@ -1,76 +1,214 @@
-import { ActionsCell, Avatar, Badge, Icon, KebabMenu, StatusDot, Table, TableState, type Column,} from '@/shared/components/ui'
-import type { User } from '../model/users.types'
-import { missingSchedule, roleTone } from '../model/users.utils'
+import {
+  ActionsCell,
+  Avatar,
+  Badge,
+  KebabMenu,
+  Table,
+  TableState,
+  UsersTableSkeleton,
+  type Column,
+} from '@/shared/components/ui'
+
+import type { UsuarioInternoResponse } from '../api/usersApi'
 
 const COLUMNS: Column[] = [
   { label: 'Nombre y apellido' },
-  { label: 'Rol' },
+  { label: 'Roles' },
   { label: 'Correo' },
   { label: 'Estado' },
   { label: 'Acciones', align: 'right' },
 ]
 
-interface UsersTableProps {
-  users: User[]
-  onDetail: (u: User) => void
-  onEdit: (u: User) => void
-  onDelete: (u: User) => void
+const NOMBRES_ROL: Record<string, string> = {
+  ADMIN: 'Administrador',
+  RECEPCIONISTA: 'Recepcionista',
+  ODONTOLOGO: 'Odontólogo',
 }
 
-export function UsersTable({ users, onDetail, onEdit, onDelete }: UsersTableProps) {
+function estadoUsuario(usuario: UsuarioInternoResponse) {
+  if (usuario.estado === 'PENDIENTE') {
+    return {
+      texto: 'Pendiente',
+      tono: 'amber' as const,
+    }
+  }
+
+  if (usuario.estado === 'BLOQUEADO') {
+    return {
+      texto: 'Bloqueado',
+      tono: 'red' as const,
+    }
+  }
+
+  if (
+    usuario.estado === 'ACTIVO' &&
+    usuario.personalActivo
+  ) {
+    return {
+      texto: 'Activo',
+      tono: 'green' as const,
+    }
+  }
+
+  return {
+    texto: 'Inactivo',
+    tono: 'gray' as const,
+  }
+}
+
+interface UsersTableProps {
+  users: UsuarioInternoResponse[]
+  loading?: boolean
+  usuarioActualId?: number | null
+  onDetail: (usuario: UsuarioInternoResponse) => void
+  onEdit: (usuario: UsuarioInternoResponse) => void
+  onToggle: (usuario: UsuarioInternoResponse) => void
+}
+
+export function UsersTable({
+  users,
+  loading = false,
+  usuarioActualId,
+  onDetail,
+  onEdit,
+  onToggle,
+}: UsersTableProps) {
   return (
     <Table columns={COLUMNS}>
-      <TableState
-        colSpan={COLUMNS.length}
-        empty={users.length === 0}
-        emptyLabel="No hay usuarios que coincidan con los filtros."
-      />
-      {users.map((u) => (
-        <tr key={u.id}>
-          <td>
-            <div className="flex items-center gap-3">
-              <Avatar
-                nombre={u.nombre}
-                apellido={u.apellido}
-                //seed={avatarSeed(u.id)}
-                size={44}
-                animate="always"
-                trackCursor={false}
-              />
-              <div>
-                <div className="font-bold">
-                  {u.nombre} {u.apellido}
-                </div>
-                <div className="text-[0.85rem] text-muted">{u.esp}</div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <Badge tone={roleTone[u.rol]}>{u.rol}</Badge>
-          </td>
-          <td className="text-ink-soft">{u.correo}</td>
-          <td>
-            <StatusDot on={u.activo}>{u.activo ? 'Activo' : 'Inactivo'}</StatusDot>
-            {missingSchedule(u) && (
-              <div className="mt-1.5">
-                <Badge tone="amber">
-                  <Icon name="warning" size={13} className="mr-1" />
-                  Sin horario
-                </Badge>
-              </div>
-            )}
-          </td>
-          <ActionsCell>
-            <KebabMenu
-              actions={[
-                { label: 'Ver detalle', icon: 'eye', onClick: () => onDetail(u) },
-                { label: 'Editar', icon: 'edit', onClick: () => onEdit(u) },
-                { label: 'Eliminar', icon: 'trash', onClick: () => onDelete(u), danger: true, dividerBefore: true },
-              ]}
-            />
-          </ActionsCell>
-        </tr>
-      ))}
+      {loading ? (
+        <UsersTableSkeleton rows={5} />
+      ) : (
+        <>
+          <TableState
+            colSpan={COLUMNS.length}
+            empty={users.length === 0}
+            emptyLabel="No hay usuarios que coincidan con los filtros."
+          />
+
+          {users.map(usuario => {
+            const nombreCompleto = [
+              usuario.nombres,
+              usuario.apellidoPaterno,
+              usuario.apellidoMaterno,
+            ]
+              .filter(Boolean)
+              .join(' ')
+
+            const estado = estadoUsuario(usuario)
+
+            const activo =
+              usuario.estado === 'ACTIVO' &&
+              usuario.personalActivo
+
+            const esCuentaPropia =
+              usuario.usuarioId === usuarioActualId
+
+            const puedeCambiarEstado =
+              usuario.estado === 'INACTIVO' ||
+              usuario.estado === 'ACTIVO'
+
+            return (
+              <tr key={usuario.usuarioId}>
+                {/* NOMBRE */}
+                <td>
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      nombre={usuario.nombres}
+                      apellido={usuario.apellidoPaterno}
+                      seed={usuario.usuarioId}
+                      size={44}
+                      animate="hover"
+                      trackCursor={false}
+                    />
+
+                    <div className="min-w-0">
+                      <p className="font-bold text-ink">
+                        {nombreCompleto}
+                      </p>
+
+                      <p className="mt-1 text-xs text-muted">
+                        <span className="font-medium">Doc. Nº:</span>{' '}
+                        <span className="tabular-nums">{usuario.numeroDocumento}</span>
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                {/* ROLES */}
+                <td>
+                  <div className="flex flex-wrap gap-1.5">
+                    {usuario.roles.map(rol => (
+                      <Badge
+                        key={rol}
+                        tone={
+                          rol === 'ODONTOLOGO'
+                            ? 'green'
+                            : rol === 'ADMIN'
+                              ? 'blue'
+                              : 'gray'
+                        }
+                      >
+                        {NOMBRES_ROL[rol] ?? rol}
+                      </Badge>
+                    ))}
+                  </div>
+                </td>
+
+                {/* CORREO */}
+                <td className="text-ink-soft">
+                  {usuario.correo}
+                </td>
+
+                {/* ESTADO */}
+                <td>
+                  <Badge tone={estado.tono}>
+                    {estado.texto}
+                  </Badge>
+                </td>
+
+                {/* ACCIONES */}
+                <ActionsCell>
+                  <KebabMenu
+                    actions={[
+                      {
+                        label: 'Ver detalle',
+                        icon: 'eye',
+                        onClick: () => onDetail(usuario),
+                      },
+
+                      {
+                        label: 'Editar',
+                        icon: 'edit',
+                        onClick: () => onEdit(usuario),
+                      },
+
+                      {
+                        label: activo
+                          ? 'Desactivar usuario'
+                          : 'Activar usuario',
+
+                        icon: activo
+                          ? 'xCircle'
+                          : 'checkCircle',
+
+                        onClick: () => onToggle(usuario),
+
+                        danger: activo,
+
+                        dividerBefore: true,
+
+                        show:
+                          puedeCambiarEstado &&
+                          !(activo && esCuentaPropia),
+                      },
+                    ]}
+                  />
+                </ActionsCell>
+              </tr>
+            )
+          })}
+        </>
+      )}
     </Table>
   )
 }

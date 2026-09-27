@@ -18,6 +18,9 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'CITAS', icon: 'citas', href: '/citas' },
   { label: 'PACIENTES', icon: 'pacientes', href: '/pacientes' },
   { label: 'PERSONAL', icon: 'user', href: '/usuarios' },
+  { label: 'ROLES', icon: 'lock', href: '/roles' },
+  { label: 'ESPECIALIDADES', icon: 'tooth', href: '/especialidades' },
+  { label: 'SERVICIOS', icon: 'toothCracked', href: '/servicios' },
 ]
 
 const RECEPTION_NAV: NavItem[] = [

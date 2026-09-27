@@ -1,36 +1,38 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import {
-  Alert,
-  Button,
-  Field,
-  FieldCheck,
-  FieldError,
-  Icon,
-  Input,
-  OtpInput,
-} from '@/shared/components/ui'
+import { Alert, AnimatedSelect, Button, Field, FieldCheck, FieldError, Icon, Input, OtpInput } from '@/shared/components/ui'
+import { documentTypesApi, type TipoDocumentoOption } from '@/shared/api/documentTypesApi'
 import { authApi } from '../api/authApi'
 import { MIN_PASSWORD } from '@/shared/lib/validation'
 import { ActivationCard } from '../components/ActivationCard'
 import { SecurityVerification } from '../components/SecurityVerification'
 
 type ActivationType = 'staff' | 'patient'
-
-type Step =
-  | 'validando'
-  | 'invalido'
-  | 'documento'
-  | 'codigo'
-  | 'password'
-  | 'completado'
+type Step = 'validando' | 'invalido' | 'documento' | 'codigo' | 'password' | 'completado'
 
 interface Props {
   type: ActivationType
 }
 
-const DNI_RE = /^\d{8}$/
 const OTP_RE = /^\d{6}$/
+const DOCUMENT_DELAY = 1500
+const FIELD_DELAY = 600
+
+function useDelayedValid(valid: boolean, key: string, delay: number) {
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!valid) {
+      setConfirmedKey(null)
+      return
+    }
+
+    const timer = window.setTimeout(() => setConfirmedKey(key), delay)
+    return () => window.clearTimeout(timer)
+  }, [valid, key, delay])
+
+  return valid && confirmedKey === key
+}
 
 export function AccountActivationPage({ type }: Props) {
   const [params] = useSearchParams()
@@ -40,10 +42,12 @@ export function AccountActivationPage({ type }: Props) {
   const [nombre, setNombre] = useState('')
   const [correo, setCorreo] = useState('')
 
-  const [dni, setDni] = useState('')
+  const [tiposDocumento, setTiposDocumento] = useState<TipoDocumentoOption[]>([])
+  const [tipoDocumento, setTipoDocumento] = useState('DNI')
+  const [numeroDocumento, setNumeroDocumento] = useState('')
+
   const [challengeId, setChallengeId] = useState<number | null>(null)
   const [codigo, setCodigo] = useState('')
-
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -59,15 +63,72 @@ export function AccountActivationPage({ type }: Props) {
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
+  const tipoActual = tiposDocumento.find(t => t.codigo === tipoDocumento)
+  const esDni = tipoDocumento === 'DNI'
+  const minDocumento = tipoActual?.longitudMin ?? (esDni ? 8 : 1)
+  const maxDocumento = tipoActual?.longitudMax ?? (esDni ? 8 : 20)
+
+  const validarDocumento = (valor = numeroDocumento) => {
+    const v = valor.trim()
+
+    if (!v) return 'Ingresa tu número de documento.'
+
+    if (v.length < minDocumento || v.length > maxDocumento) {
+      return minDocumento === maxDocumento
+        ? `El documento debe tener ${minDocumento} caracteres.`
+        : `El documento debe tener entre ${minDocumento} y ${maxDocumento} caracteres.`
+    }
+
+    if (esDni && !/^\d{8}$/.test(v))
+      return 'El DNI debe contener exactamente 8 dígitos.'
+
+    return ''
+  }
+
+  const documentoFormatoValido = !validarDocumento()
+  const documentoConfirmado = useDelayedValid(
+    documentoFormatoValido && !!numeroDocumento,
+    `${tipoDocumento}|${numeroDocumento}`,
+    DOCUMENT_DELAY,
+  )
+
+  const passwordFormatoValido =
+    password.length >= MIN_PASSWORD && password.length <= 100
+
+  const confirmFormatoValido =
+    !!confirmPassword && confirmPassword === password
+
+  const passwordConfirmado = useDelayedValid(
+    passwordFormatoValido,
+    password,
+    FIELD_DELAY,
+  )
+
+  const confirmPasswordConfirmado = useDelayedValid(
+    confirmFormatoValido,
+    `${password}|${confirmPassword}`,
+    FIELD_DELAY,
+  )
+
   const clearError = (field: string) => {
     setFieldErrors(current => ({ ...current, [field]: '' }))
     setError('')
   }
 
-  const indicator = (field: string, valid: boolean) =>
-    fieldErrors[field]
-      ? <FieldError invalid />
-      : <FieldCheck valid={valid} />
+  const indicator = (field: string, valid: boolean) => {
+    if (fieldErrors[field]) return <FieldError invalid />
+    return valid ? <FieldCheck valid /> : null
+  }
+
+  useEffect(() => {
+    documentTypesApi.listar()
+      .then(lista => {
+        setTiposDocumento(lista)
+        const inicial = lista.find(t => t.codigo === 'DNI') ?? lista[0]
+        if (inicial) setTipoDocumento(inicial.codigo)
+      })
+      .catch(() => setError('No se pudieron cargar los tipos de documento.'))
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -117,18 +178,39 @@ export function AccountActivationPage({ type }: Props) {
     return () => window.clearTimeout(timer)
   }, [step, countdown])
 
+  const cambiarTipoDocumento = (codigoDocumento: string) => {
+    setTipoDocumento(codigoDocumento)
+    setNumeroDocumento('')
+    setFieldErrors(current => ({ ...current, numeroDocumento: '' }))
+    setError('')
+  }
+
+  const cambiarNumeroDocumento = (valor: string) => {
+    const nuevo = esDni
+      ? valor.replace(/\D/g, '').slice(0, maxDocumento)
+      : valor.toUpperCase().replace(/\s/g, '').slice(0, maxDocumento)
+
+    setNumeroDocumento(nuevo)
+    clearError('numeroDocumento')
+  }
+
   const formatTime = (seconds: number) =>
-    `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(
-      seconds % 60,
-    ).padStart(2, '0')}`
+    `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 
   const startActivation = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (loading) return
 
-    if (!DNI_RE.test(dni)) {
+    const documentError = validarDocumento()
+
+    if (documentError) {
+      setFieldErrors({ numeroDocumento: documentError })
+      return
+    }
+
+    if (!documentoConfirmado) {
       setFieldErrors({
-        dni: 'Ingresa un DNI válido de 8 dígitos.',
+        numeroDocumento: 'Espera un momento mientras validamos el formato del documento.',
       })
       return
     }
@@ -147,8 +229,18 @@ export function AccountActivationPage({ type }: Props) {
 
     try {
       const response = type === 'staff'
-        ? await authApi.startStaffActivation(token, dni, captcha)
-        : await authApi.startPatientActivation(token, dni, captcha)
+        ? await authApi.startStaffActivation(
+            token,
+            tipoDocumento,
+            numeroDocumento.trim(),
+            captcha,
+          )
+        : await authApi.startPatientActivation(
+            token,
+            tipoDocumento,
+            numeroDocumento.trim(),
+            captcha,
+          )
 
       setChallengeId(response.challengeId)
       setCorreo(response.emailMasked)
@@ -156,15 +248,15 @@ export function AccountActivationPage({ type }: Props) {
       setCountdown(45)
       setStep('codigo')
     } catch (err) {
-      const message = err instanceof Error
-        ? err.message
-        : 'No se pudo confirmar tu identidad.'
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'No se pudo confirmar tu identidad.'
 
-      if (/documento|identidad|DNI/i.test(message)) {
-        setFieldErrors({ dni: message })
-      } else {
+      if (/documento|identidad|DNI|pasaporte|carn[eé]/i.test(message))
+        setFieldErrors({ numeroDocumento: message })
+      else
         setError(message)
-      }
 
       setSecurityKey(current => current + 1)
     } finally {
@@ -176,14 +268,10 @@ export function AccountActivationPage({ type }: Props) {
     event.preventDefault()
 
     if (!OTP_RE.test(codigo)) {
-      setFieldErrors({
-        codigo: 'Ingresa el código de 6 dígitos.',
-      })
+      setFieldErrors({ codigo: 'Ingresa el código de 6 dígitos.' })
       return
     }
 
-    // El backend actual verifica el OTP en /complete,
-    // junto con la creación de la contraseña.
     setFieldErrors({})
     setError('')
     setStep('password')
@@ -215,19 +303,16 @@ export function AccountActivationPage({ type }: Props) {
 
   const completeActivation = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     if (loading || challengeId === null) return
 
     const nextErrors: Record<string, string> = {}
 
-    if (password.length < MIN_PASSWORD || password.length > 100) {
+    if (password.length < MIN_PASSWORD || password.length > 100)
       nextErrors.password =
         `La contraseña debe tener entre ${MIN_PASSWORD} y 100 caracteres.`
-    }
 
-    if (!confirmPassword || confirmPassword !== password) {
+    if (!confirmPassword || confirmPassword !== password)
       nextErrors.confirmPassword = 'Las contraseñas no coinciden.'
-    }
 
     setFieldErrors(nextErrors)
 
@@ -257,18 +342,20 @@ export function AccountActivationPage({ type }: Props) {
       setConfirmPassword('')
       setCodigo('')
 
-      // Evita conservar el token utilizado en la barra del navegador.
       window.history.replaceState(
         window.history.state,
         '',
-        type === 'staff' ? '/activar-personal' : '/activate-account',
+        type === 'staff'
+          ? '/activar-personal'
+          : '/activate-account',
       )
 
       setStep('completado')
     } catch (err) {
-      const message = err instanceof Error
-        ? err.message
-        : 'No se pudo activar tu cuenta.'
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'No se pudo activar tu cuenta.'
 
       if (/código|codigo|OTP|challenge|intentos/i.test(message)) {
         setFieldErrors({ codigo: message })
@@ -303,8 +390,7 @@ export function AccountActivationPage({ type }: Props) {
         description="Este enlace de activación ha vencido o no es válido. Solicita uno nuevo para continuar."
       >
         <p className="text-center text-sm text-muted">
-          Comunícate con la recepción o administración de NeoDents
-          para solicitar una nueva invitación.
+          Comunícate con la recepción o administración de NeoDents para solicitar una nueva invitación.
         </p>
 
         <Link
@@ -324,14 +410,14 @@ export function AccountActivationPage({ type }: Props) {
         description={
           <>
             {nombre ? `¡Hola, ${nombre}! ` : ''}
-            Ingresa tu documento para activar tu cuenta.
+            Ingresa el documento con el que fuiste registrado para activar tu cuenta.
           </>
         }
       >
         <form
           onSubmit={startActivation}
           noValidate
-          className="flex flex-col gap-5"
+          className="flex w-full min-w-0 max-w-full flex-col gap-5"
         >
           {error && (
             <Alert
@@ -343,29 +429,60 @@ export function AccountActivationPage({ type }: Props) {
             </Alert>
           )}
 
-          <Field label="Tipo de documento">
-            <Input value="DNI" disabled />
-          </Field>
+          <div className="w-full min-w-0">
+            <Field label="Tipo de documento">
+              <AnimatedSelect
+                value={tipoDocumento}
+                options={tiposDocumento.map(t => ({
+                  value: t.codigo,
+                  label: `${t.codigo} · ${t.nombre}`,
+                }))}
+                onChange={cambiarTipoDocumento}
+                placeholder="Selecciona tu documento"
+                disabled={loading}
+              />
+            </Field>
+          </div>
 
-          <Field
-            label="Número de documento"
-            error={fieldErrors.dni}
-          >
-            <Input
-              value={dni}
-              placeholder="Ingresa tu DNI"
-              inputMode="numeric"
-              maxLength={8}
-              disabled={loading}
-              trailing={indicator('dni', DNI_RE.test(dni))}
-              onChange={event => {
-                setDni(
-                  event.target.value.replace(/\D/g, '').slice(0, 8),
-                )
-                clearError('dni')
-              }}
-            />
-          </Field>
+          <div className="w-full min-w-0">
+            <Field
+              label="Número de documento"
+              error={fieldErrors.numeroDocumento}
+            >
+              <Input
+                value={numeroDocumento}
+                placeholder={
+                  esDni
+                    ? 'Ingresa tu DNI'
+                    : tipoDocumento === 'CE'
+                      ? 'Ingresa tu carné de extranjería'
+                      : 'Ingresa tu pasaporte'
+                }
+                inputMode={esDni ? 'numeric' : 'text'}
+                maxLength={maxDocumento}
+                disabled={loading}
+                trailing={indicator(
+                  'numeroDocumento',
+                  documentoConfirmado,
+                )}
+                onChange={event =>
+                  cambiarNumeroDocumento(event.target.value)
+                }
+              />
+            </Field>
+
+            {!!numeroDocumento && !documentoConfirmado && (
+              <p className="mt-1.5 break-words text-xs text-muted">
+                Validaremos el formato cuando dejes de escribir.
+              </p>
+            )}
+
+            {documentoConfirmado && (
+              <p className="mt-1.5 break-words text-xs font-semibold text-success">
+                Formato de documento válido.
+              </p>
+            )}
+          </div>
 
           <SecurityVerification
             resetKey={securityKey}
@@ -374,10 +491,16 @@ export function AccountActivationPage({ type }: Props) {
 
           <Button
             type="submit"
-            disabled={loading || !securityToken || !DNI_RE.test(dni)}
-            className="h-12 w-full justify-center"
+            disabled={
+              loading ||
+              !securityToken ||
+              !documentoConfirmado
+            }
+            className="h-12 w-full min-w-0 justify-center"
           >
-            {loading ? 'Verificando…' : 'Continuar'}
+            {loading
+              ? 'Verificando…'
+              : 'Continuar'}
           </Button>
         </form>
       </ActivationCard>
@@ -398,7 +521,7 @@ export function AccountActivationPage({ type }: Props) {
       >
         <form
           onSubmit={goToPassword}
-          className="flex flex-col gap-6"
+          className="flex w-full min-w-0 flex-col gap-6"
         >
           {error && (
             <Alert
@@ -424,7 +547,7 @@ export function AccountActivationPage({ type }: Props) {
           {fieldErrors.codigo && (
             <p
               role="alert"
-              className="text-center text-sm text-danger"
+              className="break-words text-center text-sm text-danger"
             >
               {fieldErrors.codigo}
             </p>
@@ -439,7 +562,9 @@ export function AccountActivationPage({ type }: Props) {
           </Button>
 
           <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-            <span className="text-muted">¿No lo recibiste?</span>
+            <span className="text-muted">
+              ¿No lo recibiste?
+            </span>
 
             <button
               type="button"
@@ -447,7 +572,9 @@ export function AccountActivationPage({ type }: Props) {
               disabled={countdown > 0 || resending || loading}
               className="font-semibold text-brand hover:underline disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {resending ? 'Reenviando…' : 'Reenviar código'}
+              {resending
+                ? 'Reenviando…'
+                : 'Reenviar código'}
             </button>
 
             {countdown > 0 && (
@@ -470,7 +597,7 @@ export function AccountActivationPage({ type }: Props) {
         <form
           onSubmit={completeActivation}
           noValidate
-          className="flex flex-col gap-5"
+          className="flex w-full min-w-0 flex-col gap-5"
         >
           {error && (
             <Alert
@@ -501,13 +628,14 @@ export function AccountActivationPage({ type }: Props) {
                 <span className="flex items-center gap-2">
                   {indicator(
                     'password',
-                    password.length >= MIN_PASSWORD &&
-                      password.length <= 100,
+                    passwordConfirmado,
                   )}
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(value => !value)}
+                    onClick={() =>
+                      setShowPassword(value => !value)
+                    }
                     aria-label={
                       showPassword
                         ? 'Ocultar contraseña'
@@ -543,8 +671,7 @@ export function AccountActivationPage({ type }: Props) {
                 <span className="flex items-center gap-2">
                   {indicator(
                     'confirmPassword',
-                    Boolean(confirmPassword) &&
-                      confirmPassword === password,
+                    confirmPasswordConfirmado,
                   )}
 
                   <button
@@ -559,7 +686,11 @@ export function AccountActivationPage({ type }: Props) {
                     }
                   >
                     <Icon
-                      name={showConfirmPassword ? 'eyeOff' : 'eye'}
+                      name={
+                        showConfirmPassword
+                          ? 'eyeOff'
+                          : 'eye'
+                      }
                       size={18}
                     />
                   </button>
@@ -571,9 +702,11 @@ export function AccountActivationPage({ type }: Props) {
           <Button
             type="submit"
             disabled={loading}
-            className="h-12 w-full justify-center"
+            className="h-12 w-full min-w-0 justify-center"
           >
-            {loading ? 'Activando cuenta…' : 'Crear mi cuenta'}
+            {loading
+              ? 'Activando cuenta…'
+              : 'Crear mi cuenta'}
           </Button>
 
           <button
@@ -601,7 +734,7 @@ export function AccountActivationPage({ type }: Props) {
     >
       <Link
         to="/login"
-        className="flex h-12 items-center justify-center rounded-xl bg-brand font-semibold text-white hover:bg-brand-dark"
+        className="flex h-12 w-full min-w-0 items-center justify-center rounded-xl bg-brand font-semibold text-white hover:bg-brand-dark"
       >
         Iniciar sesión
       </Link>

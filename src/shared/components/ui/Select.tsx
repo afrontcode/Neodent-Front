@@ -1,36 +1,45 @@
-import type { SelectHTMLAttributes } from 'react'
-import { cn } from '@/shared/lib/cn'
-import { Icon } from './Icon'
+import { AnimatedSelect, type SelectOption } from './AnimatedSelect'
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  options: readonly string[]
-  /** Primera opción vacía, para filtros o valores sin definir. */
+export interface SelectProps {
+  options: readonly (string | SelectOption)[]
+  value?: string
+  onChange?: (e: { target: { value: string } }) => void
   placeholder?: string
+  className?: string
+  disabled?: boolean
+  'aria-label'?: string
 }
 
-export function Select({ options, placeholder, className, ...props }: SelectProps) {
+/**
+ * Componente Select adaptador que utiliza AnimatedSelect internamente para
+ * proveer animación, accesibilidad y consistencia visual en todo el sistema.
+ */
+export function Select({
+  options,
+  value = '',
+  onChange,
+  placeholder,
+  className,
+  disabled,
+  'aria-label': ariaLabel,
+}: SelectProps) {
+  const normalizedOptions: SelectOption[] = options.map(opt =>
+    typeof opt === 'string' ? { value: opt, label: opt } : opt,
+  )
+
+  const finalOptions = placeholder
+    ? [{ value: '', label: placeholder }, ...normalizedOptions]
+    : normalizedOptions
+
   return (
-    <div className="relative">
-      <select
-        className={cn(
-          'w-full cursor-pointer appearance-none rounded-control border border-line bg-surface py-3 pr-10 pl-4 text-[0.95rem] text-ink',
-          'focus:border-brand focus:outline-none',
-          className,
-        )}
-        {...props}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-      <Icon
-        name="chevronDown"
-        size={18}
-        className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-ink-soft"
-      />
-    </div>
+    <AnimatedSelect
+      value={value}
+      options={finalOptions}
+      onChange={val => onChange?.({ target: { value: val } })}
+      label={ariaLabel ?? placeholder ?? 'Seleccionar'}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+    />
   )
 }

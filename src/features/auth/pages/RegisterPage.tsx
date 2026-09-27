@@ -12,7 +12,8 @@ export function RegisterPage() {
 
   const handleSubmit = async (input: RegisterInput, turnstileToken: string) => {
     const response = await authApi.registerPatient({
-      dni: input.numeroDocumento.trim(),
+      tipoDocumento: input.tipoDocumento,
+      numeroDocumento: input.numeroDocumento.trim(),
       nombres: input.nombres.trim(),
       apellidoPaterno: input.apellidoPaterno.trim(),
       apellidoMaterno: input.apellidoMaterno.trim() || null,
@@ -26,10 +27,7 @@ export function RegisterPage() {
 
     navigate('/verificar-correo', {
       replace: true,
-      state: {
-        challengeId: response.challengeId,
-        correo: input.correo.trim().toLowerCase(),
-      },
+      state: { challengeId: response.challengeId, correo: input.correo.trim().toLowerCase() },
     })
   }
 
@@ -37,23 +35,16 @@ export function RegisterPage() {
   if (user) return <Navigate to="/" replace />
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <Card className="px-8 py-10 sm:px-10 lg:px-12">
         <header className="mb-7 text-center">
           <h2 className="text-2xl font-bold text-ink">Crear cuenta</h2>
-          <p className="mt-2 text-sm text-muted">
-            Completa tus datos para registrarte como paciente.
-          </p>
+          <p className="mt-2 text-sm text-muted">Completa tus datos para registrarte como paciente.</p>
         </header>
-
         <RegisterForm onSubmit={handleSubmit} />
-
         <p className="mt-7 text-center text-sm text-ink-soft">
           ¿Ya tienes cuenta?{' '}
-          <Link to="/login" className="font-bold text-brand hover:underline">
-            Inicia sesión
-          </Link>
+          <Link to="/login" className="font-bold text-brand hover:underline">Inicia sesión</Link>
         </p>
       </Card>
     </motion.div>

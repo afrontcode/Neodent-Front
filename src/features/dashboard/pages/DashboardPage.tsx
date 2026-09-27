@@ -324,40 +324,6 @@ function ActivityPanel() {
   )
 }
 
-function WeeklyReports() {
-  const reports = [
-    {
-      title: 'Pacientes totales',
-      value: '368',
-      detail: 'En el sistema',
-      icon: 'pacientes' as IconName,
-      accent: 'blue',
-    },
-    {
-      title: 'Pacientes nuevos',
-      value: '42',
-      detail: 'Esta semana',
-      icon: 'user' as IconName,
-      accent: 'green',
-    },
-    {
-      title: 'Citas atendidas',
-      value: '184',
-      detail: 'Esta semana',
-      icon: 'checkCircle' as IconName,
-      accent: 'purple',
-    },
-    {
-      title: 'Servicios realizados',
-      value: '216',
-      detail: 'Esta semana',
-      icon: 'tooth' as IconName,
-      accent: 'orange',
-    },
-  ]
-
-}
-
 function ServicesPanel() {
   return (
     <motion.div {...cardAnimation}>

@@ -1,18 +1,46 @@
-interface DateFieldProps {
+import { AnimatedDatePicker } from './AnimatedDatePicker'
+
+export interface DateFieldProps {
   value: string
   onChange: (value: string) => void
   label?: string
+  placeholder?: string
+  className?: string
+  disabled?: boolean
+  min?: string
+  max?: string
+  align?: 'left' | 'right'
+  todayDate?: string
+  defaultViewDate?: string
 }
 
-/** Selector de fecha (ISO). El icono de calendario lo aporta el control nativo. */
-export function DateField({ value, onChange, label = 'Filtrar por fecha' }: DateFieldProps) {
+/** Selector de fecha animado y estilizado con popover interactivo. */
+export function DateField({
+  value,
+  onChange,
+  label = 'Filtrar por fecha',
+  placeholder = 'dd/mm/aaaa',
+  className,
+  disabled,
+  min,
+  max,
+  align = 'right',
+  todayDate,
+  defaultViewDate,
+}: DateFieldProps) {
   return (
-    <input
-      type="date"
-      aria-label={label}
+    <AnimatedDatePicker
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-control border border-line bg-surface px-4 py-3 text-[0.95rem] text-ink focus:border-brand focus:outline-none"
+      onChange={onChange}
+      label={label}
+      placeholder={placeholder}
+      className={className}
+      disabled={disabled}
+      min={min}
+      max={max}
+      align={align}
+      todayDate={todayDate}
+      defaultViewDate={defaultViewDate}
     />
   )
 }
