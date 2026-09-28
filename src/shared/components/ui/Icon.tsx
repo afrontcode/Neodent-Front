@@ -32,6 +32,7 @@ const ICONS = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M12 12v4" /></>,
   warning: <path d="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />,
   spinner: <path d="M12 3a9 9 0 019 9" />,
+  refreshCw: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></>,
   check: <path d="M20 6L9 17l-5-5" />,
   user: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="10" r="3" /><path d="M6.3 18.4c1.1-2.2 3.1-3.4 5.7-3.4s4.6 1.2 5.7 3.4" /></>,
   lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></>,

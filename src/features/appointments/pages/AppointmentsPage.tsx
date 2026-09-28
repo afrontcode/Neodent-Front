@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import { useNavigate } from 'react-router-dom'
-import { AnimatedDatePicker, AppointmentsTableSkeleton, Badge, Button, Card, Icon, PageHead, SearchInput, TableFoot } from '@/shared/components/ui'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { AnimatedDatePicker, AnimatedSelect, AppointmentsTableSkeleton, Badge, Button, Card, Icon, PageHead, SearchInput, TableFoot, Toast, type ToastAviso } from '@/shared/components/ui'
 import { apiRequest } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { citaDetalleApi, type DetalleCita } from '../api/citaDetalleApi'
@@ -31,11 +31,24 @@ const tonoEstado = (estado: string): 'green' | 'blue' | 'red' | 'gray' => {
 
 export function AppointmentsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { accessToken, user } = useAuth()
+
+  const [aviso, setAviso] = useState<ToastAviso | null>(
+    (location.state as { aviso?: ToastAviso } | null)?.aviso ?? null,
+  )
+
+  useEffect(() => {
+    if ((location.state as { aviso?: ToastAviso } | null)?.aviso) {
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   const [citas, setCitas] = useState<DetalleCita[]>([])
   const [query, setQuery] = useState('')
   const [day, setDay] = useState('')
+  const [estado, setEstado] = useState('')
+  const [vista, setVista] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actualizacion, setActualizacion] = useState(0)
@@ -93,14 +106,38 @@ export function AppointmentsPage() {
   const rows = useMemo(() => {
     const buscar = query.trim().toLowerCase()
 
-    return citas.filter(c => {
-      if (day && c.fechaHoraInicio.slice(0, 10) !== day) return false
-      if (!buscar) return true
+    const hoy = new Date()
+    const manana = new Date(hoy)
+    manana.setDate(hoy.getDate() + 1)
 
-      return `${c.pacienteNombre} ${c.odontologoNombre} ${c.servicioNombre} ${citaReferencia(c.idCita)}`
-        .toLowerCase().includes(buscar)
-    }).sort((a, b) => b.fechaHoraInicio.localeCompare(a.fechaHoraInicio))
-  }, [citas, query, day])
+    const fechaHoy = hoy.toLocaleDateString('en-CA', { timeZone: 'America/Lima', })
+    const fechaManana = manana.toLocaleDateString('en-CA', { timeZone: 'America/Lima', })
+    const ahora = Date.now()
+
+    return citas
+      .filter(c => {
+        const fecha = c.fechaHoraInicio.slice(0, 10)
+
+        if (day && fecha !== day) return false
+        if (estado && c.estado !== estado) return false
+        if (vista === 'HOY' && fecha !== fechaHoy) return false
+        if (vista === 'MANANA_CONFIRMAR' && (fecha !== fechaManana || c.estado !== 'PROGRAMADA')) return false
+        if (vista === 'PROXIMAS' && (new Date(c.fechaHoraInicio).getTime() < ahora || ['ATENDIDA', 'CANCELADA', 'NO_ASISTIO'].includes(c.estado))) return false
+        if (vista === 'HISTORIAL' && !['ATENDIDA', 'CANCELADA', 'NO_ASISTIO'].includes(c.estado)) return false
+        if (!buscar) return true
+
+        return `${c.pacienteNombre} ${c.odontologoNombre} ${c.especialidadNombre ?? ''} ${c.servicioNombre} ${citaReferencia(c.idCita)} ${c.estado}`
+          .toLowerCase()
+          .includes(buscar)
+      })
+      .sort((a, b) => {
+        const aFecha = a.fechaHoraInicio
+        const bFecha = b.fechaHoraInicio
+
+        if (vista === 'HISTORIAL') return bFecha.localeCompare(aFecha)
+        return aFecha.localeCompare(bFecha)
+      })
+  }, [citas, query, day, estado, vista])
 
   return (
     <>
@@ -108,10 +145,16 @@ export function AppointmentsPage() {
         title="Citas"
         description="Consulta las citas registradas y la programación de atención del centro."
         actions={
-          <Button variant="ghost" onClick={() => setActualizacion(n => n + 1)} disabled={loading}>
-            <Icon name="calendar" size={17} />
-            Actualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            {(user?.rol === 'Administrador' || user?.rol === 'Recepcionista') && (
+              <Button icon="plus" onClick={() => navigate('/citas/nueva')}>
+                Programar cita
+              </Button>
+            )}
+            <Button variant="ghost" onClick={() => setActualizacion(n => n + 1)} disabled={loading} aria-label="Actualizar citas" title="Actualizar citas" className="px-3">
+              <Icon name="refreshCw" size={17} className={loading ? 'animate-spin' : ''} />
+            </Button>
+          </div>
         }
       />
 
@@ -132,6 +175,36 @@ export function AppointmentsPage() {
             value={day}
             onChange={setDay}
             className="w-full sm:w-52 sm:shrink-0"
+          />
+
+          <AnimatedSelect
+            label="Filtrar por estado"
+            value={estado}
+            onChange={setEstado}
+            options={[
+              { value: '', label: 'Todos los estados' },
+              { value: 'PROGRAMADA', label: 'Programadas' },
+              { value: 'CONFIRMADA', label: 'Confirmadas' },
+              { value: 'EN_ATENCION', label: 'En atención' },
+              { value: 'ATENDIDA', label: 'Atendidas' },
+              { value: 'CANCELADA', label: 'Canceladas' },
+              { value: 'NO_ASISTIO', label: 'No asistió' },
+            ]}
+            className="w-full sm:w-48"
+          />
+
+          <AnimatedSelect
+            label="Vista rápida"
+            value={vista}
+            onChange={setVista}
+            options={[
+              { value: '', label: 'Todas las citas' },
+              { value: 'HOY', label: 'Citas de hoy' },
+              { value: 'MANANA_CONFIRMAR', label: 'Mañana por confirmar' },
+              { value: 'PROXIMAS', label: 'Próximas citas' },
+              { value: 'HISTORIAL', label: 'Historial' },
+            ]}
+            className="w-full sm:w-52"
           />
         </div>
 
@@ -176,7 +249,18 @@ export function AppointmentsPage() {
                           <p className="mt-1 text-xs text-muted">{cita.servicioNombre}</p>
                         </td>
 
-                        <td className="px-5 py-4 text-ink">{cita.odontologoNombre}</td>
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-ink">
+                            {cita.odontologoNombre
+                              ? cita.odontologoNombre.startsWith('Dr')
+                                ? cita.odontologoNombre
+                                : `Dr(a). ${cita.odontologoNombre}`
+                              : 'Por asignar'}
+                          </p>
+                          {cita.especialidadNombre && (
+                            <p className="mt-1 text-xs text-muted">{cita.especialidadNombre}</p>
+                          )}
+                        </td>
 
                         <td className="px-5 py-4 text-ink">
                           {fechaFormato(cita.fechaHoraInicio)}
@@ -210,6 +294,8 @@ export function AppointmentsPage() {
           </>
         )}
       </Card>
+
+      <Toast aviso={aviso} onClose={() => setAviso(null)} />
     </>
   )
 }

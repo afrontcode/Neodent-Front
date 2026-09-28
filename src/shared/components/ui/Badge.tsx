@@ -12,10 +12,18 @@ const TONES: Record<BadgeTone, string> = {
 }
 
 /** Etiqueta de estado en forma de píldora. */
-export function Badge({ tone = 'gray', children }: { tone?: BadgeTone; children: ReactNode }) {
+export function Badge({
+  tone = 'gray',
+  className = '',
+  children,
+}: {
+  tone?: BadgeTone
+  className?: string
+  children: ReactNode
+}) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-[0.82rem] font-bold whitespace-nowrap ${TONES[tone]}`}
+      className={`inline-flex items-center rounded-full px-3 py-1 text-[0.82rem] font-bold whitespace-nowrap ${TONES[tone]} ${className}`.trim()}
     >
       {children}
     </span>

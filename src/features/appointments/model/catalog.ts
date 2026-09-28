@@ -9,6 +9,13 @@ export const BOOKING_STEPS: readonly Step[] = [
   { label: 'PASO 3', title: 'Confirmar' },
 ]
 
+export const STAFF_BOOKING_STEPS: readonly Step[] = [
+  { label: 'PASO 1', title: 'Paciente' },
+  { label: 'PASO 2', title: 'Servicio y sede' },
+  { label: 'PASO 3', title: 'Fecha y hora' },
+  { label: 'PASO 4', title: 'Confirmar' },
+]
+
 export interface Service {
   id: string
   nombre: string

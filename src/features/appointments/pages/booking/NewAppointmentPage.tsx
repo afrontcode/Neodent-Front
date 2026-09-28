@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { useNavigate } from 'react-router-dom'
-import { Button, Icon, SearchInput } from '@/shared/components/ui'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Button, Icon, SearchInput, Toast, type ToastAviso } from '@/shared/components/ui'
 import { cn } from '@/shared/lib/cn'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { BookingLayout } from '../../components/booking/BookingLayout'
 import { bookingApi, type BookingBranch, type BookingService } from '../../api/bookingApi'
+import { STAFF_BOOKING_STEPS } from '../../model/catalog'
 
 // ICONOS SEGÚN EL TIPO DE SERVICIO.
 function iconForService(name: string) {
@@ -18,21 +19,37 @@ function iconForService(name: string) {
   return 'tooth' as const
 }
 
-const normalizar = (texto: string) =>
-  texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+const normalizar = (texto: string) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+type StaffPatientDraft = {
+  paciente?: unknown
+  pacienteId: number
+  pacienteNombre: string
+  pacienteDocumento: string
+  servicioId?: number
+  sedeId?: number
+}
 
 export function NewAppointmentPage() {
   const navigate = useNavigate()
-  const { accessToken } = useAuth()
+  const { state } = useLocation()
+  const { accessToken, user } = useAuth()
+
+  const draftState = state as (StaffPatientDraft & { servicioId?: number; sedeId?: number }) | null
+  const pacienteDraft = draftState
+  const administrativo = user?.rol === 'Administrador' || user?.rol === 'Recepcionista'
 
   const [servicios, setServicios] = useState<BookingService[]>([])
   const [sedes, setSedes] = useState<BookingBranch[]>([])
-  const [servicioId, setServicioId] = useState<number | null>(null)
-  const [sedeId, setSedeId] = useState<number | null>(null)
+  const [servicioId, setServicioId] = useState<number | null>(draftState?.servicioId ?? null)
+  const [sedeId, setSedeId] = useState<number | null>(draftState?.sedeId ?? null)
 
   const [busqueda, setBusqueda] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [aviso, setAviso] = useState<ToastAviso | null>(() => {
+    return (state as { aviso?: ToastAviso } | null)?.aviso ?? null
+  })
   const [actualizacion, setActualizacion] = useState(0)
 
   // CARGAR SERVICIOS Y SEDES REALES.
@@ -60,11 +77,23 @@ export function NewAppointmentPage() {
         setServicios(services)
         setSedes(branches)
 
-        setServicioId(actual => services.some(s => s.id === actual) ? actual : services[0]?.id ?? null)
-        setSedeId(actual => branches.some(s => s.id === actual) ? actual : branches[0]?.id ?? null)
+        setServicioId(actual => {
+          if (actual && services.some(s => s.id === actual)) return actual
+          if (draftState?.servicioId && services.some(s => s.id === draftState.servicioId)) return draftState.servicioId
+          return services[0]?.id ?? null
+        })
+        setSedeId(actual => {
+          if (actual && branches.some(s => s.id === actual)) return actual
+          if (draftState?.sedeId && branches.some(s => s.id === draftState.sedeId)) return draftState.sedeId
+          return branches[0]?.id ?? null
+        })
 
       } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : 'No se pudieron cargar los servicios y las sedes.')
+        if (active) {
+          const msg = err instanceof Error ? err.message : 'No se pudieron cargar los servicios y las sedes.'
+          setError(msg)
+          setAviso({ tipo: 'error', texto: msg })
+        }
       } finally {
         if (active) setLoading(false)
       }
@@ -80,8 +109,9 @@ export function NewAppointmentPage() {
   const sedeSeleccionada = sedesCompatibles.find(s => s.id === sedeId)
 
   useEffect(() => {
+    if (!sedesCompatibles.length) return
     setSedeId(actual =>
-      sedesCompatibles.some(s => s.id === actual)
+      actual && sedesCompatibles.some(s => s.id === actual)
         ? actual
         : sedesCompatibles[0]?.id ?? null
     )
@@ -94,29 +124,38 @@ export function NewAppointmentPage() {
   // CONTINUAR CON EL SERVICIO Y LA SEDE SELECCIONADOS.
   const goNext = () => {
     if (!servicioSeleccionado || !sedeSeleccionada) return
+    if (administrativo && !pacienteDraft?.pacienteId) return
 
-    navigate('/mis-citas/nueva/fecha-y-hora', {
-      state: {
-        servicioId: servicioSeleccionado.id,
-        servicioNombre: servicioSeleccionado.nombre,
-        especialidadId: servicioSeleccionado.especialidadId,
-        duracionMinutos: servicioSeleccionado.duracionMinutos,
-        precioReferencial: servicioSeleccionado.precioReferencial,
-        sedeId: sedeSeleccionada.id,
-        sedeNombre: sedeSeleccionada.nombre,
-        sedeDireccion: sedeSeleccionada.direccion,
+    navigate(administrativo ? '/citas/nueva/fecha-y-hora' : '/mis-citas/nueva/fecha-y-hora',
+      {
+        state: {
+          ...(administrativo && pacienteDraft ? pacienteDraft : {}),
+          servicioId: servicioSeleccionado.id,
+          servicioNombre: servicioSeleccionado.nombre,
+          especialidadId: servicioSeleccionado.especialidadId,
+          duracionMinutos: servicioSeleccionado.duracionMinutos,
+          precioReferencial: servicioSeleccionado.precioReferencial,
+          sedeId: sedeSeleccionada.id,
+          sedeNombre: sedeSeleccionada.nombre,
+          sedeDireccion: sedeSeleccionada.direccion,
+        },
       },
-    })
+    )
+  }
+
+  if (administrativo && !pacienteDraft?.pacienteId) {
+    return (<Navigate to="/citas/nueva" replace />)
   }
 
   return (
     <BookingLayout
-      step={0}
+      step={administrativo ? 1 : 0}
+      steps={administrativo ? STAFF_BOOKING_STEPS : undefined}
+      exitTo={administrativo ? '/citas' : '/mis-citas'}
       footer={
-        <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:justify-between">
-
+        <div className="flex w-full flex-wrap items-center justify-between gap-2.5 sm:gap-3">
           {/* RESUMEN DE LA SELECCIÓN */}
-          <div className="hidden min-w-0 text-sm sm:block">
+          <div className="min-w-0 text-sm max-sm:w-full">
             {servicioSeleccionado && sedeSeleccionada && !loading && !error && (
               <>
                 <p className="text-xs text-muted">Tu selección</p>
@@ -127,10 +166,29 @@ export function NewAppointmentPage() {
             )}
           </div>
 
-          <Button onClick={goNext} disabled={loading || !!error || !servicioSeleccionado || !sedeSeleccionada}>
-            Continuar
-          </Button>
+          <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-end">
+            <Button
+              variant="ghost"
+              onClick={() =>
+                navigate(administrativo ? '/citas/nueva' : '/mis-citas', {
+                  state: administrativo
+                    ? {
+                        paciente: pacienteDraft?.paciente,
+                        pacienteId: pacienteDraft?.pacienteId,
+                        pacienteNombre: pacienteDraft?.pacienteNombre,
+                        pacienteDocumento: pacienteDraft?.pacienteDocumento,
+                      }
+                    : undefined,
+                })
+              }
+            >
+              {administrativo ? 'Regresar' : 'Cancelar'}
+            </Button>
 
+            <Button onClick={goNext} disabled={loading || !!error || !servicioSeleccionado || !sedeSeleccionada}>
+              Continuar
+            </Button>
+          </div>
         </div>
       }
     >
@@ -363,6 +421,7 @@ export function NewAppointmentPage() {
 
       </motion.section>
 
+      <Toast aviso={aviso} onClose={() => setAviso(null)} />
     </BookingLayout>
   )
 }

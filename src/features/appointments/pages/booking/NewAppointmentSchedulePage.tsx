@@ -1,17 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Avatar, Button, Icon } from '@/shared/components/ui'
+import { Avatar, Button, Icon, Toast, type ToastAviso } from '@/shared/components/ui'
 import { cn } from '@/shared/lib/cn'
 import { ApiError } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { BookingLayout } from '../../components/booking/BookingLayout'
 import { bookingApi, type AvailableSlot, type BookingSpecialist } from '../../api/bookingApi'
+import { STAFF_BOOKING_STEPS } from '../../model/catalog'
 
 type Draft = {
-  servicioId: number; servicioNombre: string; especialidadId: number
-  duracionMinutos?: number | null; precioReferencial?: number | null
-  sedeId: number; sedeNombre: string; sedeDireccion: string
+  paciente?: unknown
+  pacienteId?: number
+  pacienteNombre?: string
+  pacienteDocumento?: string
+
+  servicioId: number
+  servicioNombre: string
+  especialidadId: number
+  duracionMinutos?: number | null
+  precioReferencial?: number | null
+
+  sedeId: number
+  sedeNombre: string
+  sedeDireccion: string
 }
 
 type Agenda = { fecha: string; horarios: AvailableSlot[]; error: boolean }
@@ -93,7 +105,8 @@ function DoctorPhoto({
 export function NewAppointmentSchedulePage() {
   const navigate = useNavigate()
   const { state } = useLocation()
-  const { accessToken } = useAuth()
+  const { accessToken, user } = useAuth()
+  const administrativo = user?.rol === 'Administrador' || user?.rol === 'Recepcionista'
   const draft = state as Draft | null
 
   const [doctores, setDoctores] = useState<BookingSpecialist[]>([])
@@ -107,6 +120,7 @@ export function NewAppointmentSchedulePage() {
   const [cargandoAgenda, setCargandoAgenda] = useState(false)
   const [reservando, setReservando] = useState(false)
   const [error, setError] = useState('')
+  const [aviso, setAviso] = useState<ToastAviso | null>(null)
   const [actualizacion, setActualizacion] = useState(0)
 
   const reservandoRef = useRef(false)
@@ -237,32 +251,39 @@ export function NewAppointmentSchedulePage() {
       const hora = slot.hora.slice(0, 5)
 
       const hold = await bookingApi.reservar(accessToken, {
+        ...(administrativo ? { pacienteId: draft.pacienteId } : {}),
         odontologoEspecialidadId: doctor.odontologoEspecialidadId,
         sedeId: draft.sedeId,
         servicioId: draft.servicioId,
         fechaHoraInicio: `${slot.fecha}T${hora}:00`,
       })
 
-      navigate('/mis-citas/nueva/confirmar', {
-        state: {
-          ...draft,
-          odontologoEspecialidadId: doctor.odontologoEspecialidadId,
-          odontologoNombre: nombreDoctor(doctor),
-          fecha: slot.fecha,
-          hora,
-          tokenReserva: hold.tokenReserva,
-          expiresAt: hold.expiresAt,
-          segundosRestantes: hold.segundosRestantes,
-          venceEnMs: Date.now() + hold.segundosRestantes * 1000,
-        },
-      })
+      navigate(administrativo ? '/citas/nueva/confirmar' : '/mis-citas/nueva/confirmar',
+        {
+          state: {
+            ...draft,
+            odontologoEspecialidadId: doctor.odontologoEspecialidadId,
+            odontologoNombre: nombreDoctor(doctor),
+            fecha: slot.fecha,
+            hora,
+            tokenReserva: hold.tokenReserva,
+            expiresAt: hold.expiresAt,
+            segundosRestantes: hold.segundosRestantes,
+            venceEnMs: Date.now() + hold.segundosRestantes * 1000,
+          },
+        }
+      )
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
-        setError('Ese horario acaba de ser reservado por otra persona. Actualizamos la disponibilidad para ti.')
+        const msg = 'Ese horario acaba de ser reservado por otra persona. Actualizamos la disponibilidad para ti.'
+        setError(msg)
+        setAviso({ tipo: 'error', texto: msg })
         setSlot(null)
         setActualizacion(n => n + 1)
       } else {
-        setError(e instanceof Error ? e.message : 'No se pudo reservar el horario. Inténtalo de nuevo.')
+        const msg = e instanceof Error ? e.message : 'No se pudo reservar el horario. Inténtalo de nuevo.'
+        setError(msg)
+        setAviso({ tipo: 'error', texto: msg })
       }
     } finally {
       reservandoRef.current = false
@@ -270,23 +291,60 @@ export function NewAppointmentSchedulePage() {
     }
   }
 
-  if (!draft?.servicioId || !draft?.sedeId || !draft?.especialidadId) {
-    return <Navigate to="/mis-citas/nueva" replace />
+  if (!draft?.servicioId || !draft?.sedeId || !draft?.especialidadId ||
+    (administrativo && !draft?.pacienteId)) {
+    return (
+      <Navigate to={administrativo ? '/citas/nueva' : '/mis-citas/nueva'} replace />
+    )
   }
 
   return (
     <BookingLayout
-      step={1}
+      step={administrativo ? 2 : 1}
+      steps={administrativo ? STAFF_BOOKING_STEPS : undefined}
+      exitTo={administrativo ? '/citas' : '/mis-citas'}
       footer={
-        <>
-          <Button variant="ghost" onClick={() => navigate('/mis-citas/nueva')} disabled={reservando}>
-            Regresar
-          </Button>
+        <div className="flex w-full flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+          {/* RESUMEN DE LA SELECCIÓN */}
+          <div className="min-w-0 text-sm max-sm:w-full">
+            <p className="text-xs text-muted">Tu selección</p>
+            <p className="truncate font-semibold text-ink">
+              {slot && doctor
+                ? `${fechaCorta(slot.fecha)} a las ${hora12(slot.hora)} · Dr(a). ${nombreDoctor(doctor)}`
+                : `${draft.servicioNombre} · ${draft.sedeNombre}`}
+            </p>
+          </div>
 
-          <Button onClick={() => void continuar()} disabled={!slot || reservando || cargandoAgenda}>
-            {reservando ? 'Reservando…' : 'Continuar'}
-          </Button>
-        </>
+          <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-end">
+            <Button 
+              variant="ghost"
+              disabled={reservando}
+              onClick={() => navigate(administrativo ? '/citas/nueva/datos' : '/mis-citas/nueva', 
+                  {
+                    state: {
+                      ...(administrativo
+                        ? {
+                            paciente: draft.paciente,
+                            pacienteId: draft.pacienteId,
+                            pacienteNombre: draft.pacienteNombre,
+                            pacienteDocumento: draft.pacienteDocumento,
+                          }
+                        : {}),
+                      servicioId: draft.servicioId,
+                      sedeId: draft.sedeId,
+                    },
+                  },
+                )
+              }
+            >
+              Regresar
+            </Button>
+
+            <Button onClick={() => void continuar()} disabled={!slot || reservando || cargandoAgenda}>
+              {reservando ? 'Reservando…' : 'Continuar'}
+            </Button>
+          </div>
+        </div>
       }
     >
 
@@ -635,6 +693,7 @@ export function NewAppointmentSchedulePage() {
         </div>
       </section>
 
+      <Toast aviso={aviso} onClose={() => setAviso(null)} />
     </BookingLayout>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { useNavigate } from 'react-router-dom'
-import { Badge, Button, Card, Icon, PageHead, Tabs, type TabItem } from '@/shared/components/ui'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Badge, Button, Card, Icon, PageHead, Tabs, Toast, type TabItem, type ToastAviso } from '@/shared/components/ui'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { bookingApi, type BookingBranch, type BookingService, type BookingSpecialist, type CreatedAppointment } from '../api/bookingApi'
 import { citaReferencia } from '../model/citaReferencia'
@@ -38,7 +38,18 @@ const tonoEstado = (estado: string): 'green' | 'blue' | 'red' | 'gray' => {
 
 export function MyAppointmentsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { accessToken } = useAuth()
+
+  const [aviso, setAviso] = useState<ToastAviso | null>(
+    (location.state as { aviso?: ToastAviso } | null)?.aviso ?? null,
+  )
+
+  useEffect(() => {
+    if ((location.state as { aviso?: ToastAviso } | null)?.aviso) {
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   const [tab, setTab] = useState<TabValue>('proximas')
   const [citas, setCitas] = useState<CreatedAppointment[]>([])
@@ -280,6 +291,8 @@ export function MyAppointmentsPage() {
 
         </div>
       )}
+
+      <Toast aviso={aviso} onClose={() => setAviso(null)} />
     </>
   )
 }
