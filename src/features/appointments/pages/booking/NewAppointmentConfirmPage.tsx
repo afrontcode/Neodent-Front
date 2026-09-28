@@ -110,7 +110,10 @@ const formatoHora = (hora: string) => {
 
     liberar()
 
-    if (!reserva) { navigate(administrativo ? '/citas/nueva' : '/mis-citas/nueva',{ replace: true })}
+    if (!reserva) {
+      navigate(administrativo ? '/citas/nueva' : '/mis-citas/nueva', { replace: true })
+      return
+    }
 
     const {
       pacienteId,

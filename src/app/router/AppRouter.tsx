@@ -22,6 +22,7 @@ import { ServiciosPage } from '@/features/servicios/pages/ServiciosPage'
 import { ForbiddenPage } from '@/app/pages/ForbiddenPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { PATIENT_ROLES, STAFF_ROLES, type Role } from '@/domain/identity'
+import { SchedulesPage } from '@/features/schedules'
 
 const ADMIN_ROLES: readonly Role[] = ['Administrador']
 const ADMIN_RECEPTION_ROLES: readonly Role[] = ['Administrador', 'Recepcionista']
@@ -60,6 +61,7 @@ export function AppRouter() {
             <Route path="/citas/:id/reprogramar" element={<ReprogramAppointmentPage />} />
             <Route path="/pacientes/nuevo" element={<NewPatientPage />} />
             <Route path="/pacientes/:id/editar" element={<EditPatientPage />} />
+            <Route path="/horarios" element={<SchedulesPage />} />
           </Route>
 
           {/* SOLO ADMIN */}

@@ -21,12 +21,14 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Roles', icon: 'lock', href: '/roles' },
   { label: 'Especialidades', icon: 'tooth', href: '/especialidades' },
   { label: 'Servicios', icon: 'toothCracked', href: '/servicios' },
+  { label: 'Horarios', icon: 'clock', href: '/horarios' },
 ]
 
 const RECEPTION_NAV: NavItem[] = [
   DASHBOARD,
   { label: 'Citas', icon: 'citas', href: '/citas' },
   { label: 'Pacientes', icon: 'pacientes', href: '/pacientes' },
+  { label: 'Horarios', icon: 'clock', href: '/horarios' },
 ]
 
 const DENTIST_NAV: NavItem[] = [

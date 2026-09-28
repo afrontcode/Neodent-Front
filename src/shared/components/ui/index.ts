@@ -35,3 +35,5 @@ export { Skeleton, TableSkeletonRows, AppointmentsTableSkeleton,
   SedesCardsSkeleton, UsersTableSkeleton,} from './Skeleton'
 export * from './ProtectedImage'
 export { Toast, type ToastAviso, type ToastVariant } from './Toast'
+export { AnimatedTimePicker } from './AnimatedTimePicker'
+export { ClockTimePicker } from './ClockTimePicker'
