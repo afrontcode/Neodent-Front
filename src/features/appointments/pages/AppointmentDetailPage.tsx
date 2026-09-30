@@ -12,11 +12,7 @@ import {
   type ToastAviso,
 } from '@/shared/components/ui'
 import { useAuth } from '@/features/auth/model/useAuth'
-import {
-  citaDetalleApi,
-  type DetalleCita,
-  type HistorialCita,
-} from '../api/citaDetalleApi'
+import { citaDetalleApi, type DetalleCita, type HistorialCita } from '../api/citaDetalleApi'
 import { citaReferencia } from '../model/citaReferencia'
 import { AppointmentReasonDialog } from '../components/AppointmentReasonDialog'
 

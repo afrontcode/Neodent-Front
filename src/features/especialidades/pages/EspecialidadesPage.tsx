@@ -365,28 +365,25 @@ export function EspecialidadesPage() {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon="edit"
                           onClick={() => abrirEditar(especialidad)}
                           disabled={guardando || procesando}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
                         >
-                          <Icon name="edit" size={15} />
                           Editar
-                        </button>
+                        </Button>
 
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant={especialidad.activo ? 'outline' : 'primary'}
+                          className={especialidad.activo ? 'text-danger hover:border-danger/40 hover:text-danger' : undefined}
                           onClick={() => setConfirmar(especialidad)}
                           disabled={guardando || procesando}
-                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 ${
-                            especialidad.activo
-                              ? 'border-line text-ink-soft hover:border-red-300 hover:bg-red-50 hover:text-red-700'
-                              : 'border-brand text-brand hover:bg-brand-soft'
-                          }`}
                         >
                           {especialidad.activo ? 'Desactivar' : 'Activar'}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>

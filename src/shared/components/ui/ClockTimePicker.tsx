@@ -47,26 +47,105 @@ export function ClockTimePicker({
   const [tempMinute, setTempMinute] = useState(parsed.minute)
   const [tempPeriod, setTempPeriod] = useState(parsed.period)
 
-  const clockRef = useRef<HTMLDivElement>(null)
+  // Estados tipo string para permitir borrar y escribir libremente
+  const [rawHour, setRawHour] = useState(String(parsed.hour12).padStart(2, '0'))
+  const [rawMinute, setRawMinute] = useState(String(parsed.minute).padStart(2, '0'))
+  const [triggerStr, setTriggerStr] = useState(
+    `${String(parsed.hour12).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')} ${parsed.period}`,
+  )
 
-  // Sincronizar estado temporal al abrir
+  const clockRef = useRef<HTMLDivElement>(null)
+  const minuteInputRef = useRef<HTMLInputElement>(null)
+
+  // Sincronizar al cambiar value externamente
+  useEffect(() => {
+    const p = parse24to12(value)
+    setTriggerStr(
+      `${String(p.hour12).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} ${p.period}`,
+    )
+  }, [value])
+
+  // Sincronizar estado temporal al abrir modal
   useEffect(() => {
     if (abierto) {
       const p = parse24to12(value)
       setTempHour(p.hour12)
+      setRawHour(String(p.hour12).padStart(2, '0'))
       setTempMinute(p.minute)
+      setRawMinute(String(p.minute).padStart(2, '0'))
       setTempPeriod(p.period)
       setModo('hours')
     }
   }, [abierto, value])
 
   const aceptar = () => {
-    onChange(format12to24(tempHour, tempMinute, tempPeriod))
+    let h = Number.parseInt(rawHour, 10)
+    if (isNaN(h) || h < 1) h = 12
+    if (h > 12) h = 12
+
+    let m = Number.parseInt(rawMinute, 10)
+    if (isNaN(m) || m < 0) m = 0
+    if (m > 59) m = 59
+
+    const nuevo24 = format12to24(h, m, tempPeriod)
+    onChange(nuevo24)
+    setTriggerStr(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${tempPeriod}`)
     setAbierto(false)
   }
 
   const cancelar = () => {
     setAbierto(false)
+  }
+
+  // Parsear texto escrito directamente en el input disparador
+  const handleTriggerBlur = () => {
+    const trimmed = triggerStr.trim().toUpperCase()
+    if (!trimmed) {
+      // Si el usuario lo dejó vacío, restaurar
+      const p = parse24to12(value)
+      setTriggerStr(
+        `${String(p.hour12).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} ${p.period}`,
+      )
+      return
+    }
+
+    const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i)
+    if (match12) {
+      let h = Number.parseInt(match12[1], 10)
+      let m = Number.parseInt(match12[2], 10)
+      let p: 'AM' | 'PM' = (match12[3] as 'AM' | 'PM') || (h >= 12 ? 'PM' : 'AM')
+      if (h > 12 && !match12[3]) {
+        p = h >= 12 ? 'PM' : 'AM'
+        h = h % 12 === 0 ? 12 : h % 12
+      } else {
+        h = Math.min(12, Math.max(1, h))
+      }
+      m = Math.min(59, Math.max(0, m))
+      const time24 = format12to24(h, m, p)
+      onChange(time24)
+      setTriggerStr(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${p}`)
+      return
+    }
+
+    const match24 = trimmed.match(/^(\d{1,2}):?(\d{2})$/)
+    if (match24) {
+      let h = Number.parseInt(match24[1], 10)
+      let m = Number.parseInt(match24[2], 10)
+      h = Math.min(23, Math.max(0, h))
+      m = Math.min(59, Math.max(0, m))
+      const p: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM'
+      const h12 = h % 12 === 0 ? 12 : h % 12
+      const time24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      onChange(time24)
+      setTriggerStr(`${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${p}`)
+      return
+    }
+
+    // Restaurar si el formato es inválido
+    const p = parse24to12(value)
+    setTriggerStr(
+      `${String(p.hour12).padStart(2, '0')}:${String(p.minute).padStart(2, '0')} ${p.period}`,
+    )
   }
 
   // Dimensiones del reloj
@@ -89,12 +168,14 @@ export function ClockTimePicker({
       let h = Math.round(deg / 30)
       if (h === 0) h = 12
       setTempHour(h)
+      setRawHour(String(h).padStart(2, '0'))
       // Al elegir hora, pasar automáticamente a minutos para fluidez
       setModo('minutes')
     } else {
       let m = Math.round(deg / 6)
       if (m === 60) m = 0
       setTempMinute(m)
+      setRawMinute(String(m).padStart(2, '0'))
     }
   }
 
@@ -104,27 +185,42 @@ export function ClockTimePicker({
       ? (tempHour % 12) * 30
       : tempMinute * 6
 
-  // Texto para el input gatillo
-  const textoDisplay = `${String(parsed.hour12).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')} ${parsed.period}`
-
   return (
     <div className={cn('relative', className)}>
-      {/* BOTÓN DISPARADOR CON ESTILO UNIFICADO */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setAbierto(true)}
+      {/* INPUT DISPARADOR EDITABLE DIRECTAMENTE + BOTÓN DE RELOJ */}
+      <div
         className={cn(
-          'flex h-11 w-full items-center justify-between rounded-xl border border-line bg-surface px-3.5 text-left text-sm text-ink transition',
-          'hover:border-brand/40 hover:bg-hover focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20',
+          'flex h-11 w-full items-center rounded-xl border border-line bg-surface transition-colors',
+          'focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20',
           disabled && 'cursor-not-allowed opacity-50',
           abierto && 'border-brand ring-2 ring-brand/20',
         )}
-        aria-label={label}
       >
-        <span className="font-semibold tabular-nums">{textoDisplay}</span>
-        <Icon name="clock" size={17} className="text-muted" />
-      </button>
+        <input
+          type="text"
+          disabled={disabled}
+          value={triggerStr}
+          onChange={e => setTriggerStr(e.target.value)}
+          onBlur={handleTriggerBlur}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              handleTriggerBlur()
+            }
+          }}
+          placeholder="08:00 AM"
+          aria-label={label}
+          className="h-full w-full bg-transparent px-3.5 text-sm font-semibold tabular-nums text-ink outline-none"
+        />
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setAbierto(true)}
+          className="grid h-full w-10 shrink-0 place-items-center text-muted transition hover:text-brand focus:outline-none"
+          title="Abrir selector con reloj"
+        >
+          <Icon name="clock" size={17} />
+        </button>
+      </div>
 
       {/* DIÁLOGO MODAL TIPO RELOJ */}
       <AnimatePresence>
@@ -155,34 +251,111 @@ export function ClockTimePicker({
               <div className="mt-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
                   {/* HORA */}
-                  <button
-                    type="button"
-                    onClick={() => setModo('hours')}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={2}
+                    aria-label="Hora"
+                    value={rawHour}
+                    onFocus={e => {
+                      setModo('hours')
+                      e.currentTarget.select()
+                    }}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                      setRawHour(val)
+                      if (val !== '') {
+                        const num = Number.parseInt(val, 10)
+                        if (num >= 1 && num <= 12) {
+                          setTempHour(num)
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      let num = Number.parseInt(rawHour, 10)
+                      if (isNaN(num) || num < 1) num = 12
+                      if (num > 12) num = 12
+                      setTempHour(num)
+                      setRawHour(String(num).padStart(2, '0'))
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        const next = (tempHour % 12) + 1
+                        setTempHour(next)
+                        setRawHour(String(next).padStart(2, '0'))
+                      } else if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        const prev = tempHour === 1 ? 12 : tempHour - 1
+                        setTempHour(prev)
+                        setRawHour(String(prev).padStart(2, '0'))
+                      } else if (e.key === 'Enter') {
+                        setModo('minutes')
+                        minuteInputRef.current?.focus()
+                        minuteInputRef.current?.select()
+                      }
+                    }}
                     className={cn(
-                      'rounded-2xl px-4 py-2.5 text-3xl font-extrabold tabular-nums transition',
+                      'w-18 rounded-2xl py-2 text-center text-3xl font-extrabold tabular-nums transition focus:outline-none',
                       modo === 'hours'
                         ? 'bg-brand-soft text-brand ring-2 ring-brand/30'
                         : 'bg-alt text-ink hover:bg-alt/80',
                     )}
-                  >
-                    {String(tempHour).padStart(2, '0')}
-                  </button>
+                  />
 
                   <span className="text-2xl font-bold text-muted">:</span>
 
                   {/* MINUTOS */}
-                  <button
-                    type="button"
-                    onClick={() => setModo('minutes')}
+                  <input
+                    ref={minuteInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={2}
+                    aria-label="Minutos"
+                    value={rawMinute}
+                    onFocus={e => {
+                      setModo('minutes')
+                      e.currentTarget.select()
+                    }}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 2)
+                      setRawMinute(val)
+                      if (val !== '') {
+                        const num = Number.parseInt(val, 10)
+                        if (num >= 0 && num <= 59) {
+                          setTempMinute(num)
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      let num = Number.parseInt(rawMinute, 10)
+                      if (isNaN(num) || num < 0) num = 0
+                      if (num > 59) num = 59
+                      setTempMinute(num)
+                      setRawMinute(String(num).padStart(2, '0'))
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault()
+                        const next = (tempMinute + 5) % 60
+                        setTempMinute(next)
+                        setRawMinute(String(next).padStart(2, '0'))
+                      } else if (e.key === 'ArrowDown') {
+                        e.preventDefault()
+                        const prev = tempMinute === 0 ? 55 : (tempMinute - 5 + 60) % 60
+                        setTempMinute(prev)
+                        setRawMinute(String(prev).padStart(2, '0'))
+                      } else if (e.key === 'Enter') {
+                        aceptar()
+                      }
+                    }}
                     className={cn(
-                      'rounded-2xl px-4 py-2.5 text-3xl font-extrabold tabular-nums transition',
+                      'w-18 rounded-2xl py-2 text-center text-3xl font-extrabold tabular-nums transition focus:outline-none',
                       modo === 'minutes'
                         ? 'bg-brand-soft text-brand ring-2 ring-brand/30'
                         : 'bg-alt text-ink hover:bg-alt/80',
                     )}
-                  >
-                    {String(tempMinute).padStart(2, '0')}
-                  </button>
+                  />
                 </div>
 
                 {/* SELECTOR AM / PM */}

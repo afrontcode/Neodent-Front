@@ -305,6 +305,7 @@ export function RolesPage() {
                   <Button
                     size="sm"
                     variant="ghost"
+                    icon="edit"
                     onClick={() => abrirEditar(rol)}
                   >
                     Editar

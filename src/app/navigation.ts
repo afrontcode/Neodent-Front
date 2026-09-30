@@ -8,9 +8,7 @@ export interface NavItem {
 }
 
 const DASHBOARD: NavItem = {
-  label: 'Dashboard',
-  icon: 'calendar',
-  href: '/dashboard',
+  label: 'Dashboard', icon: 'calendar', href: '/dashboard',
 }
 
 const ADMIN_NAV: NavItem[] = [
@@ -21,7 +19,9 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Roles', icon: 'lock', href: '/roles' },
   { label: 'Especialidades', icon: 'tooth', href: '/especialidades' },
   { label: 'Servicios', icon: 'toothCracked', href: '/servicios' },
+  { label: 'Tipos de bloqueo', icon: 'calendarEdit', href: '/tipos-bloqueo' },
   { label: 'Horarios', icon: 'clock', href: '/horarios' },
+  { label: 'Sedes', icon: 'location', href: '/sedes' },
 ]
 
 const RECEPTION_NAV: NavItem[] = [

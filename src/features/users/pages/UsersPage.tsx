@@ -12,15 +12,8 @@ import {
   Toast,
   Toolbar,
 } from '@/shared/components/ui'
-import {
-  usersApi,
-  type PaginaResponse,
-  type UsuarioInternoResponse,
-} from '../api/usersApi'
-import {
-  rolesApi,
-  type RolResponse,
-} from '@/features/roles/api/rolesApi'
+import { usersApi, type PaginaResponse, type UsuarioInternoResponse } from '../api/usersApi'
+import { rolesApi, type RolResponse } from '@/features/roles/api/rolesApi'
 import { ApiError } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth'
 import { UsersTable } from '../components/UsersTable'
@@ -42,250 +35,130 @@ export function UsersPage() {
   const [estado, setEstado] = useState('')
   const [page, setPage] = useState(1)
 
-  const [rolesDisponibles, setRolesDisponibles] =
-    useState<RolResponse[]>([])
-
-  const [resultado, setResultado] =
-    useState<
-      PaginaResponse<UsuarioInternoResponse> | null
-    >(null)
-
+  const [rolesDisponibles, setRolesDisponibles] = useState<RolResponse[]>([])
+  const [resultado, setResultado] = useState<PaginaResponse<UsuarioInternoResponse> | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] =
-    useState<string | null>(null)
-
-  const [confirmar, setConfirmar] =
-    useState<UsuarioInternoResponse | null>(null)
-
-  const [procesando, setProcesando] =
-    useState(false)
-
-  const [aviso, setAviso] =
-    useState<Aviso | null>(null)
-
-  const [actualizacion, setActualizacion] =
-    useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [confirmar, setConfirmar] = useState<UsuarioInternoResponse | null>(null)
+  const [procesando, setProcesando] = useState(false)
+  const [aviso, setAviso] = useState<Aviso | null>(null)
+  const [actualizacion, setActualizacion] = useState(0)
 
   const procesandoRef = useRef(false)
 
   useEffect(() => {
-    const state =
-      location.state as {
-        aviso?: Aviso
-      } | null
-
+    const state = location.state as { aviso?: Aviso } | null
     if (!state?.aviso) return
-
     setAviso(state.aviso)
-
-    window.history.replaceState(
-      {},
-      document.title,
-    )
+    window.history.replaceState({}, document.title)
   }, [location.state])
 
   useEffect(() => {
     if (!accessToken) return
 
     rolesApi
-      .listar(
-        accessToken,
-        true,
-      )
-      .then(data =>
-        setRolesDisponibles(
-          data.filter(
-            rol => rol.nombre !== 'PACIENTE',
-          ),
-        ),
-      )
-      .catch(() =>
-        setRolesDisponibles([]),
-      )
+      .listar(accessToken, true)
+      .then(data => setRolesDisponibles(data.filter(r => r.nombre !== 'PACIENTE')))
+      .catch(() => setRolesDisponibles([]))
   }, [accessToken])
 
   useEffect(() => {
     if (!accessToken) {
       setLoading(false)
       setResultado(null)
-
-      setError(
-        'No se encontró una sesión activa.',
-      )
-
+      setError('No se encontró una sesión activa.')
       return
     }
 
     let active = true
-
     setLoading(true)
     setError(null)
 
     usersApi
-      .listar(
-        accessToken,
-        {
-          buscar: query,
-          rol:
-            rol ||
-            undefined,
-          estado:
-            estado ||
-            undefined,
-          page:
-            page - 1,
-          size:
-            PAGE_SIZE,
-        },
-      )
+      .listar(accessToken, {
+        buscar: query,
+        rol: rol || undefined,
+        estado: estado || undefined,
+        page: page - 1,
+        size: PAGE_SIZE,
+      })
       .then(data => {
-        if (active) {
-          setResultado(data)
-        }
+        if (active) setResultado(data)
       })
       .catch(err => {
         if (!active) return
-
         setResultado(null)
-
         setError(
-          err instanceof ApiError
-            ? err.message
-            : 'No se pudo cargar el listado de usuarios.',
+          err instanceof ApiError ? err.message : 'No se pudo cargar el listado de usuarios.',
         )
       })
       .finally(() => {
-        if (active)
-          setLoading(false)
+        if (active) setLoading(false)
       })
 
     return () => {
       active = false
     }
-  }, [
-    accessToken,
-    query,
-    rol,
-    estado,
-    page,
-    actualizacion,
-  ])
+  }, [accessToken, query, rol, estado, page, actualizacion])
 
   useEffect(() => {
     if (!aviso) return
-
-    const timer =
-      window.setTimeout(
-        () =>
-          setAviso(null),
-
-        aviso.tipo === 'error'
-          ? 7000
-          : 4500,
-      )
-
-    return () =>
-      window.clearTimeout(timer)
+    const timer = window.setTimeout(
+      () => setAviso(null),
+      aviso.tipo === 'error' ? 7000 : 4500,
+    )
+    return () => window.clearTimeout(timer)
   }, [aviso])
 
-  const rows =
-    resultado?.contenido ??
-    []
+  const rows = resultado?.contenido ?? []
+  const totalPages = Math.max(1, resultado?.totalPaginas ?? 1)
 
-  const totalPages =
-    Math.max(
-      1,
-      resultado?.totalPaginas ??
-        1,
-    )
-
-  const applyFilter = (
-    fn: () => void,
-  ) => {
+  const applyFilter = (fn: () => void) => {
     fn()
     setPage(1)
   }
 
-  const cambiarEstado =
-    async () => {
-      if (
-        !accessToken ||
-        !confirmar ||
-        procesandoRef.current
-      ) {
-        return
+  const cambiarEstado = async () => {
+    if (!accessToken || !confirmar || procesandoRef.current) return
+
+    procesandoRef.current = true
+    setProcesando(true)
+    setAviso(null)
+
+    const activar = confirmar.estado === 'INACTIVO'
+
+    try {
+      if (activar) {
+        await usersApi.activar(accessToken, confirmar.usuarioId)
+      } else {
+        await usersApi.desactivar(accessToken, confirmar.usuarioId)
       }
 
-      procesandoRef.current = true
-      setProcesando(true)
-      setAviso(null)
-
-      const activar =
-        confirmar.estado ===
-        'INACTIVO'
-
-      try {
-        if (activar) {
-          await usersApi.activar(
-            accessToken,
-            confirmar.usuarioId,
-          )
-        } else {
-          await usersApi.desactivar(
-            accessToken,
-            confirmar.usuarioId,
-          )
-        }
-
-        setConfirmar(null)
-
-        setAviso({
-          tipo: 'success',
-          texto:
-            activar
-              ? 'Usuario activado correctamente.'
-              : 'Usuario desactivado correctamente.',
-        })
-
-        setActualizacion(
-          n => n + 1,
-        )
-      } catch (err) {
-        setConfirmar(null)
-
-        setAviso({
-          tipo: 'error',
-          texto:
-            err instanceof Error
-              ? err.message
-              : 'No se pudo cambiar el estado del usuario.',
-        })
-      } finally {
-        procesandoRef.current =
-          false
-
-        setProcesando(false)
-      }
+      setConfirmar(null)
+      setAviso({
+        tipo: 'success',
+        texto: activar
+          ? 'Usuario activado correctamente.'
+          : 'Usuario desactivado correctamente.',
+      })
+      setActualizacion(n => n + 1)
+    } catch (err) {
+      setConfirmar(null)
+      setAviso({
+        tipo: 'error',
+        texto: err instanceof Error ? err.message : 'No se pudo cambiar el estado del usuario.',
+      })
+    } finally {
+      procesandoRef.current = false
+      setProcesando(false)
     }
+  }
 
-  const usuarioActualId =
-    user
-      ? Number(user.id)
-      : null
-
-  const esActivacion =
-    confirmar?.estado ===
-    'INACTIVO'
-
-  const nombreSeleccionado =
-    confirmar
-      ? [
-          confirmar.nombres,
-          confirmar.apellidoPaterno,
-        ]
-          .filter(Boolean)
-          .join(' ')
-      : ''
+  const usuarioActualId = user ? Number(user.id) : null
+  const esActivacion = confirmar?.estado === 'INACTIVO'
+  const nombreSeleccionado = confirmar
+    ? [confirmar.nombres, confirmar.apellidoPaterno].filter(Boolean).join(' ')
+    : ''
 
   return (
     <>
@@ -293,14 +166,7 @@ export function UsersPage() {
         title="Personal"
         description="Gestiona las cuentas, roles y accesos del equipo de NeoDents."
         actions={
-          <Button
-            icon="plus"
-            onClick={() =>
-              navigate(
-                '/usuarios/nuevo',
-              )
-            }
-          >
+          <Button icon="plus" onClick={() => navigate('/usuarios/nuevo')}>
             Registrar trabajador
           </Button>
         }
@@ -313,17 +179,8 @@ export function UsersPage() {
           <SearchInput
             placeholder="Buscar por nombre, documento o correo…"
             value={query}
-            onChange={e =>
-              applyFilter(() =>
-                setQuery(
-                  e.target.value,
-                ),
-              )
-            }
-            loading={
-              loading &&
-              !!query
-            }
+            onChange={e => applyFilter(() => setQuery(e.target.value))}
+            loading={loading && !!query}
             className="w-full sm:min-w-48 sm:flex-1"
           />
 
@@ -331,82 +188,33 @@ export function UsersPage() {
             label="Filtrar por rol"
             placeholder="Todos los roles"
             options={[
-              {
-                value: '',
-                label:
-                  'Todos los roles',
-              },
-
-              ...rolesDisponibles.map(r => ({
-                value: r.nombre,
-                label: r.nombre,
-              })),
+              { value: '', label: 'Todos los roles' },
+              ...rolesDisponibles.map(r => ({ value: r.nombre, label: r.nombre })),
             ]}
             value={rol}
-            onChange={value =>
-              applyFilter(() =>
-                setRol(value),
-              )
-            }
+            onChange={value => applyFilter(() => setRol(value))}
             className="w-full sm:w-56"
           />
 
           <AnimatedSelect
             label="Filtrar por estado"
             options={[
-              {
-                value: '',
-                label:
-                  'Todos los estados',
-              },
-              {
-                value: 'ACTIVO',
-                label: 'Activos',
-              },
-              {
-                value:
-                  'PENDIENTE',
-                label: 'Pendientes',
-              },
-              {
-                value:
-                  'INACTIVO',
-                label: 'Inactivos',
-              },
-              {
-                value:
-                  'BLOQUEADO',
-                label: 'Bloqueados',
-              },
+              { value: '', label: 'Todos los estados' },
+              { value: 'ACTIVO', label: 'Activos' },
+              { value: 'PENDIENTE', label: 'Pendientes' },
+              { value: 'INACTIVO', label: 'Inactivos' },
+              { value: 'BLOQUEADO', label: 'Bloqueados' },
             ]}
             value={estado}
-            onChange={value =>
-              applyFilter(() =>
-                setEstado(value),
-              )
-            }
+            onChange={value => applyFilter(() => setEstado(value))}
             className="w-full sm:w-48"
           />
         </Toolbar>
 
         {error ? (
-          <div
-            role="alert"
-            className="p-8 text-center"
-          >
-            <p className="text-sm text-danger">
-              {error}
-            </p>
-
-            <Button
-              variant="ghost"
-              className="mt-4"
-              onClick={() =>
-                setActualizacion(
-                  n => n + 1,
-                )
-              }
-            >
+          <div role="alert" className="p-8 text-center">
+            <p className="text-sm text-danger">{error}</p>
+            <Button variant="ghost" className="mt-4" onClick={() => setActualizacion(n => n + 1)}>
               Reintentar
             </Button>
           </div>
@@ -415,23 +223,11 @@ export function UsersPage() {
             <UsersTable
               users={rows}
               loading={loading}
-              usuarioActualId={
-                usuarioActualId
-              }
-              onDetail={u =>
-                navigate(
-                  `/usuarios/${u.usuarioId}`,
-                )
-              }
-              onEdit={u =>
-                navigate(
-                  `/usuarios/${u.usuarioId}/editar`,
-                )
-              }
+              usuarioActualId={usuarioActualId}
+              onDetail={u => navigate(`/usuarios/${u.usuarioId}`)}
+              onEdit={u => navigate(`/usuarios/${u.usuarioId}/editar`)}
               onToggle={u => {
-                if (!procesando) {
-                  setConfirmar(u)
-                }
+                if (!procesando) setConfirmar(u)
               }}
             />
 
@@ -445,12 +241,8 @@ export function UsersPage() {
               {!loading && (
                 <Pagination
                   page={page}
-                  totalPages={
-                    totalPages
-                  }
-                  onChange={
-                    setPage
-                  }
+                  totalPages={totalPages}
+                  onChange={setPage}
                 />
               )}
             </TableFoot>
@@ -459,14 +251,8 @@ export function UsersPage() {
       </Card>
 
       <ConfirmDialog
-        open={
-          confirmar !== null
-        }
-        title={
-          esActivacion
-            ? '¿Activar usuario?'
-            : '¿Desactivar usuario?'
-        }
+        open={confirmar !== null}
+        title={esActivacion ? '¿Activar usuario?' : '¿Desactivar usuario?'}
         description={
           confirmar
             ? esActivacion
@@ -474,23 +260,11 @@ export function UsersPage() {
               : `¿Deseas desactivar la cuenta de ${nombreSeleccionado}? Perderá el acceso al sistema y se revocarán sus sesiones activas.`
             : ''
         }
-        confirmLabel={
-          procesando
-            ? 'Procesando…'
-            : esActivacion
-              ? 'Activar'
-              : 'Desactivar'
-        }
+        confirmLabel={procesando ? 'Procesando…' : esActivacion ? 'Activar' : 'Desactivar'}
         cancelLabel="Cancelar"
-        onConfirm={() =>
-          void cambiarEstado()
-        }
+        onConfirm={() => void cambiarEstado()}
         onCancel={() => {
-          if (
-            !procesandoRef.current
-          ) {
-            setConfirmar(null)
-          }
+          if (!procesandoRef.current) setConfirmar(null)
         }}
       />
     </>

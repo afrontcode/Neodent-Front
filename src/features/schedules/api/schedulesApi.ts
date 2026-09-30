@@ -7,6 +7,8 @@ export interface HorarioOdontologo {
   diaSemana: number
   horaInicio: string
   horaFin: string
+  fechaInicioVigencia: string
+  fechaFinVigencia: string | null
   activo: boolean
 }
 
@@ -16,6 +18,8 @@ export interface HorarioOdontologoInput {
   diaSemana: number
   horaInicio: string
   horaFin: string
+  fechaInicioVigencia: string
+  fechaFinVigencia: string | null
 }
 
 export interface HorarioOdontologoCatalogo {

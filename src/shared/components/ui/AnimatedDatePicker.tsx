@@ -64,6 +64,8 @@ export function AnimatedDatePicker({
   todayDate,
 }: AnimatedDatePickerProps) {
   const [open, setOpen] = useState(false)
+  const [showMonthMenu, setShowMonthMenu] = useState(false)
+  const [showYearMenu, setShowYearMenu] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const popoverId = useId()
 
@@ -90,6 +92,9 @@ export function AnimatedDatePicker({
         setViewYear(y)
         setViewMonth(m - 1)
       }
+    } else {
+      setShowMonthMenu(false)
+      setShowYearMenu(false)
     }
   }, [open, value, defaultViewDate, hoyStr])
 
@@ -113,6 +118,8 @@ export function AnimatedDatePicker({
         !containerRef.current.contains(e.target as Node)
       ) {
         setOpen(false)
+        setShowMonthMenu(false)
+        setShowYearMenu(false)
       }
     }
 
@@ -126,7 +133,14 @@ export function AnimatedDatePicker({
   useEffect(() => {
     if (!open) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        if (showMonthMenu || showYearMenu) {
+          setShowMonthMenu(false)
+          setShowYearMenu(false)
+        } else {
+          setOpen(false)
+        }
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
@@ -289,33 +303,97 @@ export function AnimatedDatePicker({
             )}
           >
             {/* CABECERA: MES / AÑO Y NAVEGACIÓN */}
-            <div className="mb-3 flex items-center justify-between gap-1.5">
-              <div className="flex items-center gap-1">
-                <select
-                  aria-label="Seleccionar mes"
-                  value={viewMonth}
-                  onChange={e => setViewMonth(Number(e.target.value))}
-                  className="cursor-pointer rounded-lg border border-line bg-surface px-1.5 py-1 text-xs font-bold text-ink outline-none transition-colors hover:border-brand/40 focus:border-brand"
-                >
-                  {MESES.map((m, idx) => (
-                    <option key={m} value={idx}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
+            <div className="relative mb-3 flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5">
+                {/* SELECTOR DE MES PERSONALIZADO */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMonthMenu(v => !v)
+                      setShowYearMenu(false)
+                    }}
+                    className="flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-xs font-bold text-ink transition-colors hover:border-brand/40 hover:bg-alt/50"
+                  >
+                    <span>{MESES[viewMonth]}</span>
+                    <Icon name="chevronDown" size={13} className="text-muted" />
+                  </button>
 
-                <select
-                  aria-label="Seleccionar año"
-                  value={viewYear}
-                  onChange={e => setViewYear(Number(e.target.value))}
-                  className="cursor-pointer rounded-lg border border-line bg-surface px-1.5 py-1 text-xs font-bold text-ink outline-none transition-colors hover:border-brand/40 focus:border-brand"
-                >
-                  {anios.map(y => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
+                  <AnimatePresence>
+                    {showMonthMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute left-0 top-full z-30 mt-1 max-h-48 w-32 overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-xl"
+                      >
+                        {MESES.map((m, idx) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              setViewMonth(idx)
+                              setShowMonthMenu(false)
+                            }}
+                            className={cn(
+                              'w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition-colors',
+                              viewMonth === idx
+                                ? 'bg-brand text-white font-bold'
+                                : 'text-ink hover:bg-alt hover:text-brand',
+                            )}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* SELECTOR DE AÑO PERSONALIZADO */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowYearMenu(v => !v)
+                      setShowMonthMenu(false)
+                    }}
+                    className="flex items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1 text-xs font-bold text-ink transition-colors hover:border-brand/40 hover:bg-alt/50"
+                  >
+                    <span>{viewYear}</span>
+                    <Icon name="chevronDown" size={13} className="text-muted" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showYearMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute left-0 top-full z-30 mt-1 max-h-48 w-24 overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-xl"
+                      >
+                        {anios.map(y => (
+                          <button
+                            key={y}
+                            type="button"
+                            onClick={() => {
+                              setViewYear(y)
+                              setShowYearMenu(false)
+                            }}
+                            className={cn(
+                              'w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition-colors',
+                              viewYear === y
+                                ? 'bg-brand text-white font-bold'
+                                : 'text-ink hover:bg-alt hover:text-brand',
+                            )}
+                          >
+                            {y}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               <div className="flex items-center gap-0.5">

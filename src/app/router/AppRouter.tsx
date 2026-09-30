@@ -22,7 +22,7 @@ import { ServiciosPage } from '@/features/servicios/pages/ServiciosPage'
 import { ForbiddenPage } from '@/app/pages/ForbiddenPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { PATIENT_ROLES, STAFF_ROLES, type Role } from '@/domain/identity'
-import { SchedulesPage } from '@/features/schedules'
+import { SchedulesPage, ScheduleBlocksPage, BlockTypesPage } from '@/features/schedules'
 
 const ADMIN_ROLES: readonly Role[] = ['Administrador']
 const ADMIN_RECEPTION_ROLES: readonly Role[] = ['Administrador', 'Recepcionista']
@@ -62,6 +62,7 @@ export function AppRouter() {
             <Route path="/pacientes/nuevo" element={<NewPatientPage />} />
             <Route path="/pacientes/:id/editar" element={<EditPatientPage />} />
             <Route path="/horarios" element={<SchedulesPage />} />
+            <Route path="/horarios/bloqueos" element={<ScheduleBlocksPage />} />
           </Route>
 
           {/* SOLO ADMIN */}
@@ -75,6 +76,7 @@ export function AppRouter() {
             <Route path="/sedes" element={<SedesPage />} />
             <Route path="/especialidades" element={<EspecialidadesPage />} />
             <Route path="/servicios" element={<ServiciosPage />} />
+            <Route path="/tipos-bloqueo" element={<BlockTypesPage />} />
           </Route>
         </Route>
       </Route>

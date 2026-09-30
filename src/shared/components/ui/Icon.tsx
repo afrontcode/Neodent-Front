@@ -49,6 +49,7 @@ const ICONS = {
   menu: <path d="M4 6h16M4 12h16M4 18h16" />,
   chevronsUpDown: <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />,
   mapPin: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
+  location: <><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></>,
 }
 
 export type IconName = keyof typeof ICONS

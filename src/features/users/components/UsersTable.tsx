@@ -8,7 +8,6 @@ import {
   UsersTableSkeleton,
   type Column,
 } from '@/shared/components/ui'
-
 import type { UsuarioInternoResponse } from '../api/usersApi'
 
 const COLUMNS: Column[] = [
@@ -27,33 +26,15 @@ const NOMBRES_ROL: Record<string, string> = {
 
 function estadoUsuario(usuario: UsuarioInternoResponse) {
   if (usuario.estado === 'PENDIENTE') {
-    return {
-      texto: 'Pendiente',
-      tono: 'amber' as const,
-    }
+    return { texto: 'Pendiente', tono: 'amber' as const }
   }
-
   if (usuario.estado === 'BLOQUEADO') {
-    return {
-      texto: 'Bloqueado',
-      tono: 'red' as const,
-    }
+    return { texto: 'Bloqueado', tono: 'red' as const }
   }
-
-  if (
-    usuario.estado === 'ACTIVO' &&
-    usuario.personalActivo
-  ) {
-    return {
-      texto: 'Activo',
-      tono: 'green' as const,
-    }
+  if (usuario.estado === 'ACTIVO' && usuario.personalActivo) {
+    return { texto: 'Activo', tono: 'green' as const }
   }
-
-  return {
-    texto: 'Inactivo',
-    tono: 'gray' as const,
-  }
+  return { texto: 'Inactivo', tono: 'gray' as const }
 }
 
 interface UsersTableProps {
@@ -95,17 +76,10 @@ export function UsersTable({
               .join(' ')
 
             const estado = estadoUsuario(usuario)
-
-            const activo =
-              usuario.estado === 'ACTIVO' &&
-              usuario.personalActivo
-
-            const esCuentaPropia =
-              usuario.usuarioId === usuarioActualId
-
+            const activo = usuario.estado === 'ACTIVO' && usuario.personalActivo
+            const esCuentaPropia = usuario.usuarioId === usuarioActualId
             const puedeCambiarEstado =
-              usuario.estado === 'INACTIVO' ||
-              usuario.estado === 'ACTIVO'
+              usuario.estado === 'INACTIVO' || usuario.estado === 'ACTIVO'
 
             return (
               <tr key={usuario.usuarioId}>
@@ -122,10 +96,7 @@ export function UsersTable({
                     />
 
                     <div className="min-w-0">
-                      <p className="font-bold text-ink">
-                        {nombreCompleto}
-                      </p>
-
+                      <p className="font-bold text-ink">{nombreCompleto}</p>
                       <p className="mt-1 text-xs text-muted">
                         <span className="font-medium">Doc. Nº:</span>{' '}
                         <span className="tabular-nums">{usuario.numeroDocumento}</span>
@@ -155,15 +126,11 @@ export function UsersTable({
                 </td>
 
                 {/* CORREO */}
-                <td className="text-ink-soft">
-                  {usuario.correo}
-                </td>
+                <td className="text-ink-soft">{usuario.correo}</td>
 
                 {/* ESTADO */}
                 <td>
-                  <Badge tone={estado.tono}>
-                    {estado.texto}
-                  </Badge>
+                  <Badge tone={estado.tono}>{estado.texto}</Badge>
                 </td>
 
                 {/* ACCIONES */}
@@ -175,31 +142,18 @@ export function UsersTable({
                         icon: 'eye',
                         onClick: () => onDetail(usuario),
                       },
-
                       {
                         label: 'Editar',
                         icon: 'edit',
                         onClick: () => onEdit(usuario),
                       },
-
                       {
-                        label: activo
-                          ? 'Desactivar usuario'
-                          : 'Activar usuario',
-
-                        icon: activo
-                          ? 'xCircle'
-                          : 'checkCircle',
-
+                        label: activo ? 'Desactivar usuario' : 'Activar usuario',
+                        icon: activo ? 'xCircle' : 'checkCircle',
                         onClick: () => onToggle(usuario),
-
                         danger: activo,
-
                         dividerBefore: true,
-
-                        show:
-                          puedeCambiarEstado &&
-                          !(activo && esCuentaPropia),
+                        show: puedeCambiarEstado && !(activo && esCuentaPropia),
                       },
                     ]}
                   />
