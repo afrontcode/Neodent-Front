@@ -1,7 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { AnimatedDatePicker, AnimatedSelect, AppointmentsTableSkeleton, Badge, Button, Card, Icon, PageHead, SearchInput, TableFoot, Toast, type ToastAviso } from '@/shared/components/ui'
+import {
+  ActionsCell,
+  AnimatedDatePicker,
+  AnimatedSelect,
+  Badge,
+  Button,
+  Card,
+  Icon,
+  PageHead,
+  Pagination,
+  RowActions,
+  SearchInput,
+  Table,
+  TableFoot,
+  TableState,
+  Toast,
+  type Column,
+  type ToastAviso,
+} from '@/shared/components/ui'
 import { apiRequest } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { citaDetalleApi, type DetalleCita } from '../api/citaDetalleApi'
@@ -12,6 +30,17 @@ interface PaginaCitas {
   contenido: CreatedAppointment[]
   esUltima: boolean
 }
+
+const COLUMNS: Column[] = [
+  { label: 'Referencia' },
+  { label: 'Paciente' },
+  { label: 'Especialista' },
+  { label: 'Fecha y hora' },
+  { label: 'Estado', align: 'center' },
+  { label: 'Acciones', align: 'center' },
+]
+
+const POR_PAGINA = 10
 
 const fechaFormato = (fecha: string) =>
   new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -49,6 +78,7 @@ export function AppointmentsPage() {
   const [day, setDay] = useState('')
   const [estado, setEstado] = useState('')
   const [vista, setVista] = useState('')
+  const [pagina, setPagina] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actualizacion, setActualizacion] = useState(0)
@@ -139,6 +169,11 @@ export function AppointmentsPage() {
       })
   }, [citas, query, day, estado, vista])
 
+  const totalPaginas = Math.max(1, Math.ceil(rows.length / POR_PAGINA))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaActual - 1) * POR_PAGINA
+  const rowsPaginadas = useMemo(() => rows.slice(inicio, inicio + POR_PAGINA), [rows, inicio])
+
   return (
     <>
       <PageHead
@@ -164,8 +199,14 @@ export function AppointmentsPage() {
             placeholder="Buscar paciente, especialista o referencia..."
             aria-label="Buscar citas"
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            onClear={() => setQuery('')}
+            onChange={e => {
+              setQuery(e.target.value)
+              setPagina(1)
+            }}
+            onClear={() => {
+              setQuery('')
+              setPagina(1)
+            }}
             className="w-full sm:min-w-[12rem] sm:flex-1"
           />
 
@@ -173,14 +214,20 @@ export function AppointmentsPage() {
             label="Filtrar por fecha"
             placeholder="Filtrar por fecha"
             value={day}
-            onChange={setDay}
+            onChange={val => {
+              setDay(val)
+              setPagina(1)
+            }}
             className="w-full sm:w-52 sm:shrink-0"
           />
 
           <AnimatedSelect
             label="Filtrar por estado"
             value={estado}
-            onChange={setEstado}
+            onChange={val => {
+              setEstado(val)
+              setPagina(1)
+            }}
             options={[
               { value: '', label: 'Todos los estados' },
               { value: 'PROGRAMADA', label: 'Programadas' },
@@ -196,7 +243,10 @@ export function AppointmentsPage() {
           <AnimatedSelect
             label="Vista rápida"
             value={vista}
-            onChange={setVista}
+            onChange={val => {
+              setVista(val)
+              setPagina(1)
+            }}
             options={[
               { value: '', label: 'Todas las citas' },
               { value: 'HOY', label: 'Citas de hoy' },
@@ -217,80 +267,73 @@ export function AppointmentsPage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px] text-left text-sm">
-                <thead className="border-b border-line bg-alt text-xs uppercase text-muted">
-                  <tr>
-                    <th className="px-5 py-4">Referencia</th>
-                    <th className="px-5 py-4">Paciente</th>
-                    <th className="px-5 py-4">Especialista</th>
-                    <th className="px-5 py-4">Fecha y hora</th>
-                    <th className="px-5 py-4">Estado</th>
-                    <th className="px-5 py-4 text-right">Acción</th>
-                  </tr>
-                </thead>
+            <Table columns={COLUMNS}>
+              <TableState
+                colSpan={COLUMNS.length}
+                loading={loading}
+                empty={!loading && rows.length === 0}
+                emptyLabel="No se encontraron citas con los filtros seleccionados."
+              />
 
-                <tbody className="divide-y divide-line">
-                  {loading ? (
-                    <AppointmentsTableSkeleton rows={5} />
-                  ) : (
-                    rows.map((cita, index) => (
-                      <motion.tr
-                        key={cita.idCita}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.15) }}
-                        className="hover:bg-alt/60"
-                      >
-                        <td className="px-5 py-4 font-semibold text-brand">{citaReferencia(cita.idCita)}</td>
+              {!loading && rowsPaginadas.map((cita, index) => (
+                <motion.tr
+                  key={cita.idCita}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, delay: Math.min(index * 0.02, 0.15) }}
+                  className="hover:bg-alt/60"
+                >
+                  <td className="font-semibold text-brand">{citaReferencia(cita.idCita)}</td>
 
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-ink">{cita.pacienteNombre}</p>
-                          <p className="mt-1 text-xs text-muted">{cita.servicioNombre}</p>
-                        </td>
+                  <td>
+                    <p className="font-semibold text-ink">{cita.pacienteNombre}</p>
+                    <p className="mt-1 text-xs text-muted">{cita.servicioNombre}</p>
+                  </td>
 
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-ink">
-                            {cita.odontologoNombre
-                              ? cita.odontologoNombre.startsWith('Dr')
-                                ? cita.odontologoNombre
-                                : `Dr(a). ${cita.odontologoNombre}`
-                              : 'Por asignar'}
-                          </p>
-                          {cita.especialidadNombre && (
-                            <p className="mt-1 text-xs text-muted">{cita.especialidadNombre}</p>
-                          )}
-                        </td>
+                  <td>
+                    <p className="font-semibold text-ink">
+                      {cita.odontologoNombre
+                        ? cita.odontologoNombre.startsWith('Dr')
+                          ? cita.odontologoNombre
+                          : `Dr(a). ${cita.odontologoNombre}`
+                        : 'Por asignar'}
+                    </p>
+                    {cita.especialidadNombre && (
+                      <p className="mt-1 text-xs text-muted">{cita.especialidadNombre}</p>
+                    )}
+                  </td>
 
-                        <td className="px-5 py-4 text-ink">
-                          {fechaFormato(cita.fechaHoraInicio)}
-                          <p className="mt-1 text-xs text-muted">{horaFormato(cita.fechaHoraInicio)}</p>
-                        </td>
+                  <td className="text-ink">
+                    {fechaFormato(cita.fechaHoraInicio)}
+                    <p className="mt-1 text-xs text-muted">{horaFormato(cita.fechaHoraInicio)}</p>
+                  </td>
 
-                        <td className="px-5 py-4">
-                          <Badge tone={tonoEstado(cita.estado)}>{cita.estado.replaceAll('_', ' ')}</Badge>
-                        </td>
+                  <td className="text-center">
+                    <div className="flex justify-center">
+                      <Badge tone={tonoEstado(cita.estado)}>{cita.estado.replaceAll('_', ' ')}</Badge>
+                    </div>
+                  </td>
 
-                        <td className="px-5 py-4 text-right">
-                          <Button variant="ghost" onClick={() => navigate(`/citas/${cita.idCita}`)}>
-                            <Icon name="eye" size={17} />
-                            Ver detalle
-                          </Button>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  <ActionsCell align="center">
+                    <RowActions
+                      actions={[
+                        {
+                          label: 'Ver detalle',
+                          icon: 'eye',
+                          onClick: () => navigate(`/citas/${cita.idCita}`),
+                        },
+                      ]}
+                    />
+                  </ActionsCell>
+                </motion.tr>
+              ))}
+            </Table>
 
-            {!loading && rows.length === 0 && (
-              <div className="p-10 text-center text-sm text-muted">
-                No se encontraron citas con los filtros seleccionados.
-              </div>
+            {rows.length > 0 && (
+              <TableFoot summary={`Mostrando ${inicio + 1}–${Math.min(inicio + POR_PAGINA, rows.length)} de ${rows.length} citas`}>
+                <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
+              </TableFoot>
             )}
-
-            <TableFoot summary={loading ? 'Cargando citas…' : `${rows.length} cita${rows.length === 1 ? '' : 's'}`} />
           </>
         )}
       </Card>

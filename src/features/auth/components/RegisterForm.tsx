@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { Alert, AnimatedSelect, Button, Checkbox, Field, FieldCheck, FieldError, Icon, Input } from '@/shared/components/ui'
+import { Alert, AnimatedDatePicker, AnimatedSelect, Button, Checkbox, Field, FieldCheck, FieldError, Icon, Input } from '@/shared/components/ui'
 import { documentTypesApi, type TipoDocumentoOption } from '@/shared/api/documentTypesApi'
 import { ApiError } from '@/shared/api/apiClient'
 import { EMAIL_RE, MIN_PASSWORD } from '@/shared/lib/validation'
@@ -482,10 +482,15 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
       <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Fecha de Nacimiento" error={errors.fechaNacimiento}>
-          <Input icon="user" type="date" max={hoy}
-            value={values.fechaNacimiento} disabled={submitting}
-            onChange={e => update('fechaNacimiento', e.target.value)}
-            trailing={indicador('fechaNacimiento', fechaConfirmada)} />
+          <AnimatedDatePicker
+            value={values.fechaNacimiento}
+            onChange={val => update('fechaNacimiento', val)}
+            disabled={submitting}
+            max={hoy}
+            placeholder="dd/mm/aaaa"
+            defaultViewDate="2000-01-01"
+            trailing={indicador('fechaNacimiento', fechaConfirmada)}
+          />
         </Field>
 
         <Field label="Teléfono" error={errors.telefono}>

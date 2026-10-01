@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { AnimatedSelect, Button, Card, ConfirmDialog, Icon, PageHead, SearchInput, SedesCardsSkeleton, Toast } from '@/shared/components/ui'
+import { AnimatedSelect, Button, Card, ConfirmDialog, Icon, PageHead, Pagination, SearchInput, SedesCardsSkeleton, TableFoot, Toast } from '@/shared/components/ui'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { sedesApi, type Sede, type SedeInput } from '../api/sedesApi'
 
@@ -440,31 +440,9 @@ export function SedesPage() {
 
             {/* PAGINACIÓN */}
             {filtradas.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
-                <p className="text-xs text-muted">
-                  Mostrando {inicio + 1}–{Math.min(inicio + POR_PAGINA, filtradas.length)} de {filtradas.length}
-                </p>
-
-                {totalPaginas > 1 && (
-                  <div className="flex items-center gap-2">
-                    <button type="button" aria-label="Página anterior" disabled={paginaActual === 1}
-                      onClick={() => setPagina(paginaActual - 1)}
-                      className="rounded-lg border border-line p-2 text-ink transition hover:bg-alt disabled:opacity-40">
-                      <Icon name="chevronLeft" size={17} />
-                    </button>
-
-                    <span className="px-2 text-xs font-semibold text-ink">
-                      {paginaActual} / {totalPaginas}
-                    </span>
-
-                    <button type="button" aria-label="Página siguiente" disabled={paginaActual === totalPaginas}
-                      onClick={() => setPagina(paginaActual + 1)}
-                      className="rounded-lg border border-line p-2 text-ink transition hover:bg-alt disabled:opacity-40">
-                      <Icon name="chevronRight" size={17} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <TableFoot summary={`Mostrando ${inicio + 1}–${Math.min(inicio + POR_PAGINA, filtradas.length)} de ${filtradas.length}`}>
+                <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
+              </TableFoot>
             )}
           </>
         )}

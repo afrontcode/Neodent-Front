@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { AnimatedSelect, Button, Card, Checkbox, ConfirmDialog, Icon, PageHead, SearchInput, ServicesCardsSkeleton, Toast } from '@/shared/components/ui'
+import { AnimatedSelect, Button, Card, Checkbox, ConfirmDialog, Icon, PageHead, Pagination, SearchInput, ServicesCardsSkeleton, TableFoot, Toast, Toolbar } from '@/shared/components/ui'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { serviciosApi, type Servicio, type ServicioInput, type EspecialidadOption } from '../api/serviciosApi'
 import { sedesApi, type Sede } from '@/features/sedes/api/sedesApi'
@@ -26,7 +26,7 @@ const VACIO: Formulario = {
   sedeIds: [],
 }
 
-const POR_PAGINA = 6
+const POR_PAGINA = 10
 const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 const moneda = (n: number) => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(n)
 
@@ -38,6 +38,8 @@ export function ServiciosPage() {
   const [sedes, setSedes] = useState<Sede[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('todos')
+  const [filtroEspecialidad, setFiltroEspecialidad] = useState('')
+  const [filtroSede, setFiltroSede] = useState('')
   const [pagina, setPagina] = useState(1)
 
   const [form, setForm] = useState<Formulario>(VACIO)
@@ -232,15 +234,39 @@ export function ServiciosPage() {
     }
   }
 
-  // FILTROS Y PAGINACIÓN.
-  const filtrados = servicios.filter(s => {
-    const texto = normalizar(`${s.nombre} ${s.especialidadNombre} ${s.descripcion ?? ''}`)
-    const coincide = texto.includes(normalizar(busqueda.trim()))
+  // OPCIONES PARA LOS SELECTORES DE FILTRO
+  const opcionesEspecialidades = useMemo(() => [
+    { value: '', label: 'Todas las especialidades' },
+    ...especialidades.map(e => ({ value: String(e.id), label: e.nombre })),
+  ], [especialidades])
 
-    if (filtro === 'activos') return coincide && s.activo
-    if (filtro === 'inactivos') return coincide && !s.activo
-    return coincide
-  })
+  const opcionesSedes = useMemo(() => [
+    { value: '', label: 'Todas las sedes' },
+    ...sedes.map(s => ({ value: String(s.id), label: s.nombre })),
+  ], [sedes])
+
+  // FILTROS Y PAGINACIÓN.
+  const filtrados = useMemo(() => {
+    const q = normalizar(busqueda.trim())
+
+    return servicios.filter(s => {
+      const texto = normalizar(`${s.nombre} ${s.especialidadNombre} ${s.descripcion ?? ''}`)
+      if (q && !texto.includes(q)) return false
+
+      if (filtro === 'activos' && !s.activo) return false
+      if (filtro === 'inactivos' && s.activo) return false
+
+      if (filtroEspecialidad && s.especialidadId !== Number(filtroEspecialidad)) {
+        return false
+      }
+
+      if (filtroSede && !s.sedeIds.includes(Number(filtroSede))) {
+        return false
+      }
+
+      return true
+    })
+  }, [servicios, busqueda, filtro, filtroEspecialidad, filtroSede])
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
   const paginaActual = Math.min(pagina, totalPaginas)
@@ -579,17 +605,17 @@ export function ServiciosPage() {
 
       {/* LISTADO */}
       <Card className="overflow-visible">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line p-5">
-          <div>
+        <div className="border-b border-line">
+          <div className="p-5 pb-3">
             <h2 className="font-bold text-ink">Servicios registrados</h2>
             <p className="mt-1 text-xs text-muted">
               {servicios.length} servicio{servicios.length === 1 ? '' : 's'} en el sistema
             </p>
           </div>
 
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Toolbar className="border-t border-line/60">
             <SearchInput
-              placeholder="Buscar servicio..."
+              placeholder="Buscar por servicio, especialidad o descripción…"
               aria-label="Buscar servicio"
               value={busqueda}
               onChange={e => {
@@ -600,14 +626,36 @@ export function ServiciosPage() {
                 setBusqueda('')
                 setPagina(1)
               }}
-              className="w-full sm:w-64"
+              className="w-full sm:min-w-56 sm:flex-1"
             />
 
             <AnimatedSelect
-              label="Filtrar servicios por estado"
+              label="Especialidad"
+              value={filtroEspecialidad}
+              options={opcionesEspecialidades}
+              onChange={valor => {
+                setFiltroEspecialidad(valor)
+                setPagina(1)
+              }}
+              className="w-full sm:w-52"
+            />
+
+            <AnimatedSelect
+              label="Sede"
+              value={filtroSede}
+              options={opcionesSedes}
+              onChange={valor => {
+                setFiltroSede(valor)
+                setPagina(1)
+              }}
+              className="w-full sm:w-44"
+            />
+
+            <AnimatedSelect
+              label="Estado"
               value={filtro}
               options={[
-                { value: 'todos', label: 'Todos' },
+                { value: 'todos', label: 'Todos los estados' },
                 { value: 'activos', label: 'Activos' },
                 { value: 'inactivos', label: 'Inactivos' },
               ]}
@@ -615,9 +663,9 @@ export function ServiciosPage() {
                 setFiltro(valor as Filtro)
                 setPagina(1)
               }}
-              className="w-full sm:w-36 sm:shrink-0"
+              className="w-full sm:w-40"
             />
-          </div>
+          </Toolbar>
         </div>
 
         {loading ? (
@@ -748,14 +796,14 @@ export function ServiciosPage() {
                     </div>
 
                     {/* ACCIONES */}
-                    <div className="mt-3 flex justify-end gap-2 border-t border-line pt-2.5">
+                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
                       <button
                         type="button"
                         onClick={() => abrirEditar(servicio)}
                         disabled={guardando || procesando}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
                       >
-                        <Icon name="edit" size={14} />
+                        <Icon name="edit" size={15} />
                         Editar
                       </button>
 
@@ -764,7 +812,7 @@ export function ServiciosPage() {
                         onClick={() => setConfirmar(servicio)}
                         disabled={guardando || procesando}
                         className={cn(
-                          'rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-50',
+                          'rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
                           servicio.activo
                             ? 'border-line text-ink-soft hover:border-red-300 hover:bg-red-50 hover:text-red-700'
                             : 'border-brand text-brand hover:bg-brand-soft',
@@ -786,39 +834,9 @@ export function ServiciosPage() {
 
             {/* PAGINACIÓN */}
             {filtrados.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
-                <p className="text-xs text-muted">
-                  Mostrando {inicio + 1}–{Math.min(inicio + POR_PAGINA, filtrados.length)} de {filtrados.length}
-                </p>
-
-                {totalPaginas > 1 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      aria-label="Página anterior"
-                      disabled={paginaActual === 1}
-                      onClick={() => setPagina(paginaActual - 1)}
-                      className="rounded-lg border border-line p-2 text-ink disabled:opacity-40"
-                    >
-                      <Icon name="chevronLeft" size={17} />
-                    </button>
-
-                    <span className="px-2 text-xs font-semibold">
-                      {paginaActual} / {totalPaginas}
-                    </span>
-
-                    <button
-                      type="button"
-                      aria-label="Página siguiente"
-                      disabled={paginaActual === totalPaginas}
-                      onClick={() => setPagina(paginaActual + 1)}
-                      className="rounded-lg border border-line p-2 text-ink disabled:opacity-40"
-                    >
-                      <Icon name="chevronRight" size={17} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <TableFoot summary={`Mostrando ${inicio + 1}–${Math.min(inicio + POR_PAGINA, filtrados.length)} de ${filtrados.length}`}>
+                <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
+              </TableFoot>
             )}
           </>
         )}

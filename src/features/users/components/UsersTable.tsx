@@ -2,7 +2,7 @@ import {
   ActionsCell,
   Avatar,
   Badge,
-  KebabMenu,
+  RowActions,
   Table,
   TableState,
   UsersTableSkeleton,
@@ -14,8 +14,8 @@ const COLUMNS: Column[] = [
   { label: 'Nombre y apellido' },
   { label: 'Roles' },
   { label: 'Correo' },
-  { label: 'Estado' },
-  { label: 'Acciones', align: 'right' },
+  { label: 'Estado', align: 'center' },
+  { label: 'Acciones', align: 'center' },
 ]
 
 const NOMBRES_ROL: Record<string, string> = {
@@ -129,13 +129,15 @@ export function UsersTable({
                 <td className="text-ink-soft">{usuario.correo}</td>
 
                 {/* ESTADO */}
-                <td>
-                  <Badge tone={estado.tono}>{estado.texto}</Badge>
+                <td className="text-center">
+                  <div className="flex justify-center">
+                    <Badge tone={estado.tono}>{estado.texto}</Badge>
+                  </div>
                 </td>
 
                 {/* ACCIONES */}
-                <ActionsCell>
-                  <KebabMenu
+                <ActionsCell align="center">
+                  <RowActions
                     actions={[
                       {
                         label: 'Ver detalle',
@@ -151,8 +153,7 @@ export function UsersTable({
                         label: activo ? 'Desactivar usuario' : 'Activar usuario',
                         icon: activo ? 'xCircle' : 'checkCircle',
                         onClick: () => onToggle(usuario),
-                        danger: activo,
-                        dividerBefore: true,
+                        variant: activo ? 'danger' : 'success',
                         show: puedeCambiarEstado && !(activo && esCuentaPropia),
                       },
                     ]}

@@ -16,11 +16,11 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Citas', icon: 'citas', href: '/citas' },
   { label: 'Pacientes', icon: 'pacientes', href: '/pacientes' },
   { label: 'Personal', icon: 'user', href: '/usuarios' },
+  { label: 'Horarios', icon: 'clock', href: '/horarios' },
+  { label: 'Bloqueos', icon: 'calendarEdit', href: '/tipos-bloqueo' },
   { label: 'Roles', icon: 'lock', href: '/roles' },
   { label: 'Especialidades', icon: 'tooth', href: '/especialidades' },
   { label: 'Servicios', icon: 'toothCracked', href: '/servicios' },
-  { label: 'Tipos de bloqueo', icon: 'calendarEdit', href: '/tipos-bloqueo' },
-  { label: 'Horarios', icon: 'clock', href: '/horarios' },
   { label: 'Sedes', icon: 'location', href: '/sedes' },
 ]
 

@@ -2,22 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   ActionsCell, AnimatedSelect, Avatar, Badge, Button, Card, ConfirmDialog,
-  Icon, KebabMenu, PageHead, Pagination, SearchInput, Table, TableFoot,
+  Icon, PageHead, Pagination, RowActions, SearchInput, Table, TableFoot,
   TableState, Toast, Toolbar, type Column,
 } from '@/shared/components/ui'
 import { ApiError } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth'
 import { patientsApi, type PacienteResponse, type PaginaResponse } from '../api/patientsApi'
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 10
 
 const COLUMNS: Column[] = [
   { label: 'Paciente' },
   { label: 'Documento' },
   { label: 'Contacto' },
-  { label: 'Cuenta' },
-  { label: 'Estado' },
-  { label: 'Acciones', align: 'right' },
+  { label: 'Cuenta', align: 'center' },
+  { label: 'Estado', align: 'center' },
+  { label: 'Acciones', align: 'center' },
 ]
 
 type Aviso = {
@@ -290,20 +290,24 @@ export function PatientsPage() {
                 </div>
               </td>
 
-              <td>
-                <Badge tone={p.tieneCuenta ? 'blue' : 'amber'}>
-                  {p.tieneCuenta ? 'Con cuenta' : 'Sin cuenta'}
-                </Badge>
+              <td className="text-center">
+                <div className="flex justify-center">
+                  <Badge tone={p.tieneCuenta ? 'blue' : 'amber'}>
+                    {p.tieneCuenta ? 'Con cuenta' : 'Sin cuenta'}
+                  </Badge>
+                </div>
               </td>
 
-              <td>
-                <Badge tone={p.activo ? 'green' : 'gray'}>
-                  {p.activo ? 'Activo' : 'Inactivo'}
-                </Badge>
+              <td className="text-center">
+                <div className="flex justify-center">
+                  <Badge tone={p.activo ? 'green' : 'gray'}>
+                    {p.activo ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </div>
               </td>
 
-              <ActionsCell>
-                <KebabMenu
+              <ActionsCell align="center">
+                <RowActions
                   actions={[
                     {
                       label: 'Ver detalle',
@@ -332,7 +336,7 @@ export function PatientsPage() {
                           paciente: p,
                         }),
                       show: puedeGestionar,
-                      danger: p.activo,
+                      variant: p.activo ? 'danger' : 'success',
                       dividerBefore: true,
                     },
                   ]}

@@ -752,26 +752,27 @@ export function ScheduleBlocksPage() {
                         </h3>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon="edit"
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          title="Editar bloqueo"
+                          aria-label="Editar bloqueo"
                           onClick={() => abrirEditar(bloqueo)}
                           disabled={guardando || procesando}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:border-brand/40 hover:bg-alt hover:text-brand disabled:opacity-50"
                         >
-                          Editar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon="trash"
-                          className="text-danger hover:border-danger/40 hover:text-danger"
+                          <Icon name="edit" size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          title="Eliminar bloqueo"
+                          aria-label="Eliminar bloqueo"
                           onClick={() => setEliminar(bloqueo)}
                           disabled={guardando || procesando}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:border-danger/40 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                         >
-                          Eliminar
-                        </Button>
+                          <Icon name="trash" size={15} />
+                        </button>
                       </div>
                     </div>
 
@@ -797,13 +798,13 @@ export function ScheduleBlocksPage() {
               })}
             </div>
 
-            <TableFoot
-              summary={`${bloqueosFiltrados.length} bloqueo${bloqueosFiltrados.length === 1 ? '' : 's'} en total`}
-            >
-              {totalPaginas > 1 && (
+            {bloqueosFiltrados.length > 0 && (
+              <TableFoot
+                summary={`Mostrando ${(pagina - 1) * PAGE_SIZE + 1}–${Math.min(pagina * PAGE_SIZE, bloqueosFiltrados.length)} de ${bloqueosFiltrados.length} bloqueos`}
+              >
                 <Pagination page={pagina} totalPages={totalPaginas} onChange={setPagina} />
-              )}
-            </TableFoot>
+              </TableFoot>
+            )}
           </>
         )}
       </Card>

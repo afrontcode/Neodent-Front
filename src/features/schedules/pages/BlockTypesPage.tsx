@@ -1,22 +1,32 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  Badge,
+  AnimatedSelect,
   Button,
   Card,
   Checkbox,
   ConfirmDialog,
   Icon,
   PageHead,
+  Pagination,
+  SearchInput,
+  TableFoot,
   Toast,
   type ToastAviso,
 } from '@/shared/components/ui'
+import { cn } from '@/shared/lib/cn'
 import { useAuth } from '@/features/auth/model/useAuth'
 import {
   blockTypesApi,
   type BlockType,
   type BlockTypeInput,
 } from '../api/blockTypesApi'
+
+type Filtro = 'todas' | 'activas' | 'inactivas'
+const POR_PAGINA = 6
+
+const normalizar = (texto: string) =>
+  texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
 type Formulario = {
   codigo: string
@@ -41,6 +51,8 @@ const VACIO: Formulario = {
 const normalizarCodigo = (value: string) =>
   value
     .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
@@ -60,6 +72,10 @@ export function BlockTypesPage() {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState<ToastAviso | null>(null)
   const [refresh, setRefresh] = useState(0)
+
+  const [busqueda, setBusqueda] = useState('')
+  const [filtro, setFiltro] = useState<Filtro>('todas')
+  const [pagina, setPagina] = useState(1)
 
   useEffect(() => {
     if (!accessToken) {
@@ -92,6 +108,35 @@ export function BlockTypesPage() {
   }, [accessToken, refresh])
 
   const activos = useMemo(() => tipos.filter(tipo => tipo.activo).length, [tipos])
+
+  const cambiarBusqueda = (valor: string) => {
+    setBusqueda(valor)
+    setPagina(1)
+  }
+
+  const cambiarFiltro = (valor: Filtro) => {
+    setFiltro(valor)
+    setPagina(1)
+  }
+
+  const filtradas = useMemo(() => {
+    return tipos.filter(t => {
+      const texto = `${t.nombre} ${t.codigo} ${t.descripcion ?? ''}`
+      const coincide = normalizar(texto).includes(normalizar(busqueda.trim()))
+
+      if (filtro === 'activas') return coincide && t.activo
+      if (filtro === 'inactivas') return coincide && !t.activo
+      return coincide
+    })
+  }, [tipos, busqueda, filtro])
+
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaActual - 1) * POR_PAGINA
+  const visibles = useMemo(
+    () => filtradas.slice(inicio, inicio + POR_PAGINA),
+    [filtradas, inicio],
+  )
 
   const abrirNuevo = () => {
     setForm(VACIO)
@@ -132,11 +177,11 @@ export function BlockTypesPage() {
     setAviso(null)
 
     try {
-      const codigo = normalizarCodigo(form.codigo)
       const nombre = form.nombre.trim()
-
-      if (!codigo) throw new Error('Ingresa un código válido.')
       if (!nombre) throw new Error('Ingresa el nombre del tipo de bloqueo.')
+
+      const codigo = editando !== null && form.codigo ? form.codigo : normalizarCodigo(nombre)
+      if (!codigo) throw new Error('No se pudo generar un código válido a partir del nombre.')
 
       if (form.requiereOdontologo && !form.permiteOdontologo) {
         throw new Error('Si el odontólogo es obligatorio, también debe estar permitido.')
@@ -266,20 +311,7 @@ export function BlockTypesPage() {
               </div>
 
               <form onSubmit={event => void guardar(event)} className="grid gap-4 lg:grid-cols-2">
-                <label className="min-w-0">
-                  <span className="mb-1.5 block text-sm font-semibold text-ink">Código</span>
-                  <input
-                    value={form.codigo}
-                    onChange={event => setForm(actual => ({ ...actual, codigo: event.target.value }))}
-                    onBlur={() => setForm(actual => ({ ...actual, codigo: normalizarCodigo(actual.codigo) }))}
-                    maxLength={30}
-                    disabled={guardando}
-                    placeholder="Ej. LICENCIA_MEDICA"
-                    className="w-full rounded-control border border-line bg-surface px-3 py-2.5 text-sm text-ink outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </label>
-
-                <label className="min-w-0">
+                <label className="min-w-0 lg:col-span-2">
                   <span className="mb-1.5 block text-sm font-semibold text-ink">Nombre</span>
                   <input
                     value={form.nombre}
@@ -304,9 +336,17 @@ export function BlockTypesPage() {
                   />
                 </label>
 
-                <div className="rounded-2xl border border-line bg-alt/40 p-4">
-                  <p className="mb-3 text-sm font-bold text-ink">Reglas para odontólogo</p>
-                  <div className="space-y-3">
+                <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
+                  <div className="mb-3 flex items-center gap-2.5">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-soft text-brand">
+                      <Icon name="user" size={16} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-ink">Reglas para odontólogo</p>
+                      <p className="text-[11px] text-muted">Alcance y obligatoriedad en la excepción</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2.5">
                     <Checkbox
                       checked={form.permiteOdontologo}
                       onChange={event =>
@@ -318,8 +358,19 @@ export function BlockTypesPage() {
                             : false,
                         }))
                       }
-                      label="Permitir seleccionar odontólogo"
                       disabled={guardando}
+                      className={cn(
+                        'w-full rounded-xl border p-3 transition-colors',
+                        form.permiteOdontologo
+                          ? 'border-brand/40 bg-brand-soft/20'
+                          : 'border-line bg-surface hover:bg-alt/40',
+                      )}
+                      label={
+                        <div className="min-w-0">
+                          <span className="block text-sm font-semibold text-ink">Permitir seleccionar odontólogo</span>
+                          <span className="block text-xs text-muted mt-0.5">Permite vincular la excepción a un profesional específico</span>
+                        </div>
+                      }
                     />
                     <Checkbox
                       checked={form.requiereOdontologo}
@@ -332,15 +383,34 @@ export function BlockTypesPage() {
                             : actual.permiteOdontologo,
                         }))
                       }
-                      label="Odontólogo obligatorio"
                       disabled={guardando}
+                      className={cn(
+                        'w-full rounded-xl border p-3 transition-colors',
+                        form.requiereOdontologo
+                          ? 'border-brand/40 bg-brand-soft/20'
+                          : 'border-line bg-surface hover:bg-alt/40',
+                      )}
+                      label={
+                        <div className="min-w-0">
+                          <span className="block text-sm font-semibold text-ink">Odontólogo obligatorio</span>
+                          <span className="block text-xs text-muted mt-0.5">La excepción requerirá seleccionar obligatoriamente un odontólogo</span>
+                        </div>
+                      }
                     />
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-line bg-alt/40 p-4">
-                  <p className="mb-3 text-sm font-bold text-ink">Reglas para sede</p>
-                  <div className="space-y-3">
+                <div className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
+                  <div className="mb-3 flex items-center gap-2.5">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-soft text-brand">
+                      <Icon name="mapPin" size={16} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-ink">Reglas para sede</p>
+                      <p className="text-[11px] text-muted">Alcance y obligatoriedad en la excepción</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2.5">
                     <Checkbox
                       checked={form.permiteSede}
                       onChange={event =>
@@ -350,8 +420,19 @@ export function BlockTypesPage() {
                           requiereSede: event.target.checked ? actual.requiereSede : false,
                         }))
                       }
-                      label="Permitir seleccionar sede"
                       disabled={guardando}
+                      className={cn(
+                        'w-full rounded-xl border p-3 transition-colors',
+                        form.permiteSede
+                          ? 'border-brand/40 bg-brand-soft/20'
+                          : 'border-line bg-surface hover:bg-alt/40',
+                      )}
+                      label={
+                        <div className="min-w-0">
+                          <span className="block text-sm font-semibold text-ink">Permitir seleccionar sede</span>
+                          <span className="block text-xs text-muted mt-0.5">Permite vincular la excepción a una sede en particular</span>
+                        </div>
+                      }
                     />
                     <Checkbox
                       checked={form.requiereSede}
@@ -362,8 +443,19 @@ export function BlockTypesPage() {
                           permiteSede: event.target.checked ? true : actual.permiteSede,
                         }))
                       }
-                      label="Sede obligatoria"
                       disabled={guardando}
+                      className={cn(
+                        'w-full rounded-xl border p-3 transition-colors',
+                        form.requiereSede
+                          ? 'border-brand/40 bg-brand-soft/20'
+                          : 'border-line bg-surface hover:bg-alt/40',
+                      )}
+                      label={
+                        <div className="min-w-0">
+                          <span className="block text-sm font-semibold text-ink">Sede obligatoria</span>
+                          <span className="block text-xs text-muted mt-0.5">La excepción requerirá seleccionar obligatoriamente una sede</span>
+                        </div>
+                      }
                     />
                   </div>
                 </div>
@@ -386,13 +478,36 @@ export function BlockTypesPage() {
         )}
       </AnimatePresence>
 
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-5">
+      <Card className="overflow-visible">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line p-5">
           <div>
-            <h2 className="text-base font-bold text-ink sm:text-lg">Catálogo de tipos</h2>
+            <h2 className="font-bold text-ink">Catálogo de tipos</h2>
             <p className="mt-1 text-xs text-muted">
-              {activos} activo{activos === 1 ? '' : 's'} de {tipos.length} registrado{tipos.length === 1 ? '' : 's'}.
+              {tipos.length} tipo{tipos.length === 1 ? '' : 's'} en el sistema
             </p>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <SearchInput
+              placeholder="Buscar tipo de bloqueo..."
+              aria-label="Buscar tipo de bloqueo"
+              value={busqueda}
+              onChange={e => cambiarBusqueda(e.target.value)}
+              onClear={() => cambiarBusqueda('')}
+              className="w-full sm:w-64"
+            />
+
+            <AnimatedSelect
+              label="Filtrar tipos por estado"
+              value={filtro}
+              options={[
+                { value: 'todas', label: 'Todas' },
+                { value: 'activas', label: 'Activas' },
+                { value: 'inactivas', label: 'Inactivas' },
+              ]}
+              onChange={valor => cambiarFiltro(valor as Filtro)}
+              className="w-full sm:w-36 sm:shrink-0"
+            />
           </div>
         </div>
 
@@ -414,69 +529,135 @@ export function BlockTypesPage() {
             <p className="mt-3 font-semibold text-ink">No hay tipos de bloqueo registrados.</p>
           </div>
         ) : (
-          <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-2">
-            {tipos.map(tipo => (
-              <article key={tipo.id} className="rounded-2xl border border-line bg-surface p-4 shadow-xs">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-ink">{tipo.nombre}</h3>
-                      <Badge tone={tipo.activo ? 'green' : 'gray'}>
+          <>
+            <div className="grid gap-3 bg-alt/40 p-3 sm:p-4 lg:grid-cols-2">
+              {visibles.map((tipo, index) => (
+                <motion.article
+                  key={tipo.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.15) }}
+                  className={cn(
+                    'flex min-w-0 flex-col justify-between rounded-xl border border-l-[3px] bg-surface p-4 shadow-sm transition-all hover:shadow-card',
+                    tipo.activo
+                      ? 'border-line border-l-brand hover:border-brand/50'
+                      : 'border-line border-l-slate-300 hover:border-slate-400',
+                  )}
+                >
+                  <div>
+                    {/* NOMBRE Y ESTADO */}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <span
+                          className={cn(
+                            'grid h-10 w-10 shrink-0 place-items-center rounded-lg',
+                            tipo.activo ? 'bg-brand-soft text-brand' : 'bg-alt text-muted',
+                          )}
+                        >
+                          <Icon name="calendarEdit" size={20} />
+                        </span>
+
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-bold text-ink">{tipo.nombre}</h3>
+                        </div>
+                      </div>
+
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
+                          tipo.activo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'h-1.5 w-1.5 rounded-full',
+                            tipo.activo ? 'bg-emerald-500' : 'bg-slate-400',
+                          )}
+                        />
                         {tipo.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      </span>
                     </div>
-                    <p className="mt-1 font-mono text-[11px] font-semibold text-muted">{tipo.codigo}</p>
+
+                    {/* DESCRIPCIÓN */}
+                    {tipo.descripcion && (
+                      <p className="mt-3 text-xs leading-relaxed text-muted line-clamp-2">
+                        {tipo.descripcion}
+                      </p>
+                    )}
+
+                    {/* ALCANCE: ODONTÓLOGO Y SEDE */}
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-alt/60 p-2.5">
+                        <span className="block text-[11px] font-semibold text-ink">Odontólogo</span>
+                        <span className="text-xs text-muted">
+                          {!tipo.permiteOdontologo
+                            ? 'No permitido'
+                            : tipo.requiereOdontologo
+                              ? 'Obligatorio'
+                              : 'Opcional'}
+                        </span>
+                      </div>
+                      <div className="rounded-lg bg-alt/60 p-2.5">
+                        <span className="block text-[11px] font-semibold text-ink">Sede</span>
+                        <span className="text-xs text-muted">
+                          {!tipo.permiteSede
+                            ? 'No permitida'
+                            : tipo.requiereSede
+                              ? 'Obligatoria'
+                              : 'Opcional'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon="edit"
+                  {/* ACCIONES */}
+                  <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
+                    <button
+                      type="button"
                       onClick={() => abrirEditar(tipo)}
+                      disabled={guardando || procesando}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
                     >
+                      <Icon name="edit" size={15} />
                       Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={tipo.activo ? 'outline' : 'primary'}
-                      className={tipo.activo ? 'text-danger hover:border-danger/40 hover:text-danger' : undefined}
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setConfirmarEstado(tipo)}
+                      disabled={guardando || procesando}
+                      className={cn(
+                        'rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
+                        tipo.activo
+                          ? 'border-line text-ink-soft hover:border-red-300 hover:bg-red-50 hover:text-red-700'
+                          : 'border-brand text-brand hover:bg-brand-soft',
+                      )}
                     >
                       {tipo.activo ? 'Desactivar' : 'Activar'}
-                    </Button>
+                    </button>
                   </div>
-                </div>
+                </motion.article>
+              ))}
 
-                {tipo.descripcion && (
-                  <p className="mt-3 text-sm leading-relaxed text-muted">{tipo.descripcion}</p>
-                )}
-
-                <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
-                  <div className="rounded-xl bg-alt/60 p-3">
-                    <p className="font-bold text-ink">Odontólogo</p>
-                    <p className="mt-1 text-muted">
-                      {!tipo.permiteOdontologo
-                        ? 'No permitido'
-                        : tipo.requiereOdontologo
-                          ? 'Obligatorio'
-                          : 'Opcional'}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-alt/60 p-3">
-                    <p className="font-bold text-ink">Sede</p>
-                    <p className="mt-1 text-muted">
-                      {!tipo.permiteSede
-                        ? 'No permitida'
-                        : tipo.requiereSede
-                          ? 'Obligatoria'
-                          : 'Opcional'}
-                    </p>
-                  </div>
+              {visibles.length === 0 && (
+                <div className="rounded-xl bg-surface px-5 py-12 text-center lg:col-span-2">
+                  <Icon name="calendarEdit" size={28} className="mx-auto text-muted" />
+                  <p className="mt-2 text-sm text-ink">
+                    {busqueda || filtro !== 'todas'
+                      ? 'No se encontraron tipos de bloqueo con los filtros seleccionados.'
+                      : 'No hay tipos de bloqueo registrados.'}
+                  </p>
                 </div>
-              </article>
-            ))}
-          </div>
+              )}
+            </div>
+
+            {/* PAGINACIÓN */}
+            {filtradas.length > 0 && (
+              <TableFoot summary={`Mostrando ${inicio + 1}–${Math.min(inicio + POR_PAGINA, filtradas.length)} de ${filtradas.length}`}>
+                <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
+              </TableFoot>
+            )}
+          </>
         )}
       </Card>
 

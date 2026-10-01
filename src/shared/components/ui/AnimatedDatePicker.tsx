@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { cn } from '@/shared/lib/cn'
 import { Icon } from './Icon'
@@ -15,6 +15,7 @@ export interface AnimatedDatePickerProps {
   align?: 'left' | 'right'
   defaultViewDate?: string
   todayDate?: string
+  trailing?: ReactNode
 }
 
 const MESES = [
@@ -62,6 +63,7 @@ export function AnimatedDatePicker({
   align = 'right',
   defaultViewDate,
   todayDate,
+  trailing,
 }: AnimatedDatePickerProps) {
   const [open, setOpen] = useState(false)
   const [showMonthMenu, setShowMonthMenu] = useState(false)
@@ -254,8 +256,9 @@ export function AnimatedDatePicker({
           </span>
         </div>
 
-        {/* ACCIONES DEL BOTÓN: LIMPIAR O CHEVRON */}
-        <div className="flex items-center gap-1">
+        {/* ACCIONES DEL BOTÓN: LIMPIAR O CHEVRON + TRAILING */}
+        <div className="flex items-center gap-1.5">
+          {trailing}
           {value && !disabled && (
             <span
               role="button"

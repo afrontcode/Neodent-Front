@@ -1,14 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { AnimatedSelect, Button, Card, ConfirmDialog, EspecialidadesSkeleton, Icon, PageHead, SearchInput, Toast } from '@/shared/components/ui'
+import { AnimatedSelect, Button, Card, ConfirmDialog, EspecialidadesSkeleton, Icon, PageHead, Pagination, SearchInput, TableFoot, Toast } from '@/shared/components/ui'
 import { useAuth } from '@/features/auth/model/useAuth'
 import { especialidadesApi, type Especialidad, type EspecialidadInput } from '../api/especialidadesApi'
+import { cn } from '@/shared/lib/cn'
 
 type Filtro = 'todas' | 'activas' | 'inactivas'
 type Aviso = { tipo: 'success' | 'error'; texto: string }
 
 const VACIO = { nombre: '', descripcion: '' }
-const POR_PAGINA = 6
+const POR_PAGINA = 10
 
 const normalizar = (texto: string) =>
   texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -365,25 +366,29 @@ export function EspecialidadesPage() {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon="edit"
+                        <button
+                          type="button"
                           onClick={() => abrirEditar(especialidad)}
                           disabled={guardando || procesando}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
                         >
+                          <Icon name="edit" size={15} />
                           Editar
-                        </Button>
+                        </button>
 
-                        <Button
-                          size="sm"
-                          variant={especialidad.activo ? 'outline' : 'primary'}
-                          className={especialidad.activo ? 'text-danger hover:border-danger/40 hover:text-danger' : undefined}
+                        <button
+                          type="button"
                           onClick={() => setConfirmar(especialidad)}
                           disabled={guardando || procesando}
+                          className={cn(
+                            'rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
+                            especialidad.activo
+                              ? 'border-line text-ink-soft hover:border-red-300 hover:bg-red-50 hover:text-red-700'
+                              : 'border-brand text-brand hover:bg-brand-soft',
+                          )}
                         >
                           {especialidad.activo ? 'Desactivar' : 'Activar'}
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -404,39 +409,9 @@ export function EspecialidadesPage() {
 
             {/* PAGINACIÓN */}
             {filtradas.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
-                <p className="text-xs text-muted">
-                  Mostrando {inicio + 1} - {Math.min(inicio + POR_PAGINA, filtradas.length)} de {filtradas.length}
-                </p>
-
-                {totalPaginas > 1 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      aria-label="Página anterior"
-                      disabled={paginaActual === 1}
-                      onClick={() => setPagina(paginaActual - 1)}
-                      className="rounded-lg border border-line p-2 text-ink transition hover:bg-alt disabled:opacity-40"
-                    >
-                      <Icon name="chevronLeft" size={17} />
-                    </button>
-
-                    <span className="px-2 text-xs font-semibold text-ink">
-                      {paginaActual} / {totalPaginas}
-                    </span>
-
-                    <button
-                      type="button"
-                      aria-label="Página siguiente"
-                      disabled={paginaActual === totalPaginas}
-                      onClick={() => setPagina(paginaActual + 1)}
-                      className="rounded-lg border border-line p-2 text-ink transition hover:bg-alt disabled:opacity-40"
-                    >
-                      <Icon name="chevronRight" size={17} />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <TableFoot summary={`Mostrando ${inicio + 1}–${Math.min(inicio + POR_PAGINA, filtradas.length)} de ${filtradas.length}`}>
+                <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
+              </TableFoot>
             )}
           </>
         )}

@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import {
   ActionsCell,
   Badge,
-  KebabMenu,
+  RowActions,
   SeparatorRow,
   Table,
   TableState,
@@ -19,9 +19,9 @@ const COLUMNS: Column[] = [
   { label: 'Paciente' },
   { label: 'Odontólogo' },
   { label: 'Lugar' },
-  { label: 'Estado' },
-  { label: 'Pago' },
-  { label: 'Acciones', align: 'right' },
+  { label: 'Estado', align: 'center' },
+  { label: 'Pago', align: 'center' },
+  { label: 'Acciones', align: 'center' },
 ]
 
 interface AppointmentsTableProps {
@@ -63,21 +63,25 @@ export function AppointmentsTable({
               <td className="font-bold">{pacName(a.pacId)}</td>
               <td>{docName(a.docId)}</td>
               <td>{a.lugar}</td>
-              <td>
-                <Badge tone={statusTone[a.estado]}>{a.estado}</Badge>
+              <td className="text-center">
+                <div className="flex justify-center">
+                  <Badge tone={statusTone[a.estado]}>{a.estado}</Badge>
+                </div>
               </td>
-              <td>
-                <Badge tone={paymentTone[a.pago]}>{a.pago}</Badge>
-                {a.precio != null && (
-                  <div className="mt-1 text-[0.8rem] text-muted">{money(a.precio)}</div>
-                )}
+              <td className="text-center">
+                <div className="flex flex-col items-center justify-center">
+                  <Badge tone={paymentTone[a.pago]}>{a.pago}</Badge>
+                  {a.precio != null && (
+                    <div className="mt-1 text-[0.8rem] text-muted">{money(a.precio)}</div>
+                  )}
+                </div>
               </td>
-              <ActionsCell>
-                <KebabMenu
+              <ActionsCell align="center">
+                <RowActions
                   actions={[
                     { label: 'Ver detalle de la cita', icon: 'eye', onClick: () => onDetail(a) },
                     { label: 'Ver ficha del paciente', icon: 'file', onClick: () => onPatient(a) },
-                    { label: 'Reprogramar', icon: 'calendarEdit', onClick: () => onReschedule(a), show: actionable },
+                    { label: 'Reprogramar cita', icon: 'calendarEdit', onClick: () => onReschedule(a), show: actionable },
                     { label: 'Cancelar cita', icon: 'xCircle', onClick: () => onCancel(a), danger: true, dividerBefore: true, show: actionable },
                   ]}
                 />

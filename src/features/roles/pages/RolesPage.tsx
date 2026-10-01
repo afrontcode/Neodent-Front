@@ -1,6 +1,26 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Badge, Button, Card, ConfirmDialog, Field, Input, PageHead, SearchInput, Table, TableState, Toast, type Column } from '@/shared/components/ui'
+import {
+  ActionsCell,
+  AnimatedSelect,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  Field,
+  Icon,
+  Input,
+  PageHead,
+  Pagination,
+  RowActions,
+  SearchInput,
+  Table,
+  TableFoot,
+  TableState,
+  Toast,
+  Toolbar,
+  type Column,
+} from '@/shared/components/ui'
 import { useAuth } from '@/features/auth'
 import { ApiError } from '@/shared/api/apiClient'
 import { rolesApi, type RolResponse } from '../api/rolesApi'
@@ -8,10 +28,12 @@ import { rolesApi, type RolResponse } from '../api/rolesApi'
 const COLUMNS: Column[] = [
   { label: 'Rol' },
   { label: 'Descripción' },
-  { label: 'Tipo' },
-  { label: 'Estado' },
-  { label: 'Acciones', align: 'right' },
+  { label: 'Tipo', align: 'center' },
+  { label: 'Estado', align: 'center' },
+  { label: 'Acciones', align: 'center' },
 ]
+
+const POR_PAGINA = 10
 
 type Aviso = { tipo: 'success' | 'error'; texto: string }
 
@@ -19,6 +41,9 @@ export function RolesPage() {
   const { accessToken } = useAuth()
   const [roles, setRoles] = useState<RolResponse[]>([])
   const [query, setQuery] = useState('')
+  const [tipo, setTipo] = useState('')
+  const [estado, setEstado] = useState('')
+  const [pagina, setPagina] = useState(1)
   const [loading, setLoading] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -69,14 +94,22 @@ export function RolesPage() {
   const filtrados = useMemo(() => {
     const q = query.trim().toLowerCase()
 
-    if (!q) return roles
+    return roles.filter(r => {
+      if (q && !`${r.nombre} ${r.descripcion ?? ''}`.toLowerCase().includes(q)) {
+        return false
+      }
+      if (tipo === 'SISTEMA' && !r.sistema) return false
+      if (tipo === 'PERSONALIZADO' && r.sistema) return false
+      if (estado === 'ACTIVO' && !r.activo) return false
+      if (estado === 'INACTIVO' && r.activo) return false
+      return true
+    })
+  }, [roles, query, tipo, estado])
 
-    return roles.filter(r =>
-      `${r.nombre} ${r.descripcion ?? ''}`
-        .toLowerCase()
-        .includes(q),
-    )
-  }, [roles, query])
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const inicio = (paginaActual - 1) * POR_PAGINA
+  const visibles = useMemo(() => filtrados.slice(inicio, inicio + POR_PAGINA), [filtrados, inicio])
 
   const abrirNuevo = () => {
     setEditando(null)
@@ -258,14 +291,51 @@ export function RolesPage() {
       </AnimatePresence>
 
       <Card>
-        <div className="p-4">
+        <Toolbar>
           <SearchInput
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar rol…"
-            className="w-full sm:max-w-md"
+            onChange={e => {
+              setQuery(e.target.value)
+              setPagina(1)
+            }}
+            onClear={() => {
+              setQuery('')
+              setPagina(1)
+            }}
+            placeholder="Buscar por rol o descripción…"
+            className="w-full sm:min-w-56 sm:flex-1"
           />
-        </div>
+
+          <AnimatedSelect
+            label="Tipo"
+            value={tipo}
+            onChange={val => {
+              setTipo(val)
+              setPagina(1)
+            }}
+            options={[
+              { value: '', label: 'Todos los tipos' },
+              { value: 'SISTEMA', label: 'Sistema' },
+              { value: 'PERSONALIZADO', label: 'Personalizado' },
+            ]}
+            className="w-full sm:w-44"
+          />
+
+          <AnimatedSelect
+            label="Estado"
+            value={estado}
+            onChange={val => {
+              setEstado(val)
+              setPagina(1)
+            }}
+            options={[
+              { value: '', label: 'Todos los estados' },
+              { value: 'ACTIVO', label: 'Activos' },
+              { value: 'INACTIVO', label: 'Inactivos' },
+            ]}
+            className="w-full sm:w-44"
+          />
+        </Toolbar>
 
         <Table columns={COLUMNS}>
           <TableState
@@ -276,7 +346,7 @@ export function RolesPage() {
             emptyLabel="No hay roles registrados."
           />
 
-          {!loading && filtrados.map(rol => (
+          {!loading && visibles.map(rol => (
             <tr key={rol.id}>
               <td>
                 <span className="font-bold text-ink">
@@ -288,43 +358,49 @@ export function RolesPage() {
                 {rol.descripcion || 'Sin descripción'}
               </td>
 
-              <td>
-                <Badge tone={rol.sistema ? 'blue' : 'gray'}>
-                  {rol.sistema ? 'Sistema' : 'Personalizado'}
-                </Badge>
-              </td>
-
-              <td>
-                <Badge tone={rol.activo ? 'green' : 'gray'}>
-                  {rol.activo ? 'Activo' : 'Inactivo'}
-                </Badge>
-              </td>
-
-              <td className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    icon="edit"
-                    onClick={() => abrirEditar(rol)}
-                  >
-                    Editar
-                  </Button>
-
-                  {!rol.sistema && (
-                    <Button
-                      size="sm"
-                      variant={rol.activo ? 'danger' : 'outline'}
-                      onClick={() => setConfirmar(rol)}
-                    >
-                      {rol.activo ? 'Desactivar' : 'Activar'}
-                    </Button>
-                  )}
+              <td className="text-center">
+                <div className="flex justify-center">
+                  <Badge tone={rol.sistema ? 'blue' : 'gray'}>
+                    {rol.sistema ? 'Sistema' : 'Personalizado'}
+                  </Badge>
                 </div>
               </td>
+
+              <td className="text-center">
+                <div className="flex justify-center">
+                  <Badge tone={rol.activo ? 'green' : 'gray'}>
+                    {rol.activo ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </div>
+              </td>
+
+              <ActionsCell align="center">
+                <RowActions
+                  actions={[
+                    {
+                      label: 'Editar rol',
+                      icon: 'edit',
+                      onClick: () => abrirEditar(rol),
+                    },
+                    {
+                      label: rol.activo ? 'Desactivar rol' : 'Activar rol',
+                      icon: rol.activo ? 'xCircle' : 'checkCircle',
+                      onClick: () => setConfirmar(rol),
+                      show: !rol.sistema,
+                      variant: rol.activo ? 'danger' : 'success',
+                    },
+                  ]}
+                />
+              </ActionsCell>
             </tr>
           ))}
         </Table>
+
+        {filtrados.length > 0 && (
+          <TableFoot summary={`Mostrando ${inicio + 1}–${Math.min(inicio + POR_PAGINA, filtrados.length)} de ${filtrados.length} roles`}>
+            <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
+          </TableFoot>
+        )}
       </Card>
 
       <ConfirmDialog

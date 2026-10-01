@@ -18,7 +18,7 @@ import { ApiError } from '@/shared/api/apiClient'
 import { useAuth } from '@/features/auth'
 import { UsersTable } from '../components/UsersTable'
 
-const PAGE_SIZE = 7
+const PAGE_SIZE = 10
 
 type Aviso = {
   tipo: 'success' | 'error' | 'warning'

@@ -1268,25 +1268,26 @@ export function SchedulesPage() {
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center gap-1 shrink-0">
                                 {bloqueoTotalFechaSeleccionada && <Badge tone="amber">Bloqueado</Badge>}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  icon="edit"
+                                <button
+                                  type="button"
+                                  title="Editar turno"
+                                  aria-label="Editar turno"
                                   onClick={() => abrirEditar(horario)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:border-brand/40 hover:bg-alt hover:text-brand"
                                 >
-                                  Editar
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  icon="trash"
-                                  className="text-danger hover:border-danger/40 hover:text-danger"
+                                  <Icon name="edit" size={15} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Eliminar turno"
+                                  aria-label="Eliminar turno"
                                   onClick={() => setConfirmar(horario)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-muted transition hover:border-danger/40 hover:bg-danger/10 hover:text-danger"
                                 >
-                                  Desactivar
-                                </Button>
+                                  <Icon name="trash" size={15} />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -1302,13 +1303,13 @@ export function SchedulesPage() {
 
       <ConfirmDialog
         open={confirmar !== null}
-        title="¿Desactivar horario de atención?"
+        title="¿Eliminar horario de atención?"
         description={
           confirmar
-            ? `El turno de ${hora12(confirmar.horaInicio)} a ${hora12(confirmar.horaFin)} dejará de generar disponibilidad dentro de su periodo de vigencia.`
+            ? `El turno de ${hora12(confirmar.horaInicio)} a ${hora12(confirmar.horaFin)} dejará de estar disponible en la agenda.`
             : undefined
         }
-        confirmLabel={procesando ? 'Desactivando…' : 'Desactivar horario'}
+        confirmLabel={procesando ? 'Eliminando…' : 'Eliminar horario'}
         cancelLabel="Cancelar"
         onCancel={() => {
           if (!procesando) setConfirmar(null)
